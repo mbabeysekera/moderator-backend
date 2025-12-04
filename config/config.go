@@ -28,3 +28,11 @@ func GetBasePath() (string, error) {
 	}
 	return val, nil
 }
+
+func GetDBConnectionString() (string, error) {
+	val, err := envVariableHandler("DATABASE_URL")
+	if err != nil {
+		return "", err
+	}
+	return val, nil
+}

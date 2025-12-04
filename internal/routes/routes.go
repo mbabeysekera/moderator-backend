@@ -13,5 +13,6 @@ func RegisterRoutes(server *gin.Engine) error {
 	}
 	api := server.Group(basePath)
 	api.GET("/health", controllers.HealthCheck)
+	api.POST("/event", controllers.CreateEvent)
 	return nil
 }
