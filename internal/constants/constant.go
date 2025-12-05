@@ -1,19 +1,11 @@
 package constants
 
-type EventCode int
+type EventCode string
 
 const (
-	EventNew EventCode = iota
-	EventPending
-	EventCompleted
-	EventFailed
-	EventStale
+	EventNew       EventCode = "NEW"
+	EventPending   EventCode = "PENDING"
+	EventCompleted EventCode = "COMPLTED"
+	EventFailed    EventCode = "FAILED"
+	EventStale     EventCode = "STALE"
 )
-
-var EventStatus = map[EventCode]string{
-	EventNew:       "NEW",
-	EventPending:   "PENDING",
-	EventCompleted: "COMPLTED",
-	EventFailed:    "FAILED",
-	EventStale:     "STALE",
-}

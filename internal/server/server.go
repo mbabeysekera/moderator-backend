@@ -16,11 +16,15 @@ type Server struct {
 
 func New() (*Server, error) {
 	engine := gin.Default()
-	err := routes.RegisterRoutes(engine)
+	basePath, err := config.GetBasePath()
 	if err != nil {
-		log.Fatalf("Server initialization failed: %v", err)
 		return nil, err
 	}
+
+	routerGroup := engine.Group(basePath)
+	routes.RegisterHealthCheckRoutes(routerGroup)
+	routes.RegisterEventRoutes(routerGroup)
+
 	appPort, err := config.GetServerPort()
 	if err != nil {
 		log.Fatal("Application server port has not been set")

@@ -37,25 +37,4 @@ func InitDB() {
 
 	DB = db
 	log.Println("✅ Connected to PostgreSQL")
-	createEvenTable()
-}
-
-func createEvenTable() {
-	eventTable := `
-		CREATE TABLE IF NOT EXISTS events (
-			id TEXT NOT NULL,
-			name TEXT NOT NULL,
-			description TEXT NOT NULL,
-			target TEXT NOT NULL,
-			command TEXT NOT NULL,
-			status INTEGER NOT NULL,
-			createdAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			processedAt TIMESTAMPTZ NOT NULL 
-		)
-	`
-	_, err := DB.Exec(context.Background(), eventTable)
-	if err != nil {
-		log.Fatal("Error:", err)
-	}
-	log.Println("✅ Event Table Created")
 }
