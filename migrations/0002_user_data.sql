@@ -1,0 +1,17 @@
+-- +goose Up
+-- CREATE TABLE IF NOT EXISTS users (
+--     id BIGSERIAL PRIMARY KEY,
+--     mobile_no TEXT NOT NULL,
+--     email TEXT UNIQUE,
+--     username TEXT UNIQUE,
+--     password_hash TEXT NOT NULL,
+--     full_name TEXT,
+--     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+--     failed_login_attempts INT NOT NULL DEFAULT 0,
+--     last_login_at TIMESTAMPTZ,
+--     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+--     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+-- );
+-- CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+-- +goose Down
+-- DROP TABLE IF EXISTS users;

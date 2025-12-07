@@ -9,3 +9,10 @@ const (
 	EventFailed    EventCode = "FAILED"
 	EventStale     EventCode = "STALE"
 )
+
+type RequestStatus string
+
+const (
+	RequestSuccess RequestStatus = "SUCCESS"
+	RequestFailed  RequestStatus = "FAILED"
+)

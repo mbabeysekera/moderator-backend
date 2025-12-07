@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"coolbreez.lk/moderator/internal/db"
@@ -15,9 +16,13 @@ func main() {
 		log.Fatal(".env file not found")
 	}
 
-	db.InitDB()
+	ctx := context.Background()
+	pool, err := db.InitDB(ctx)
+	if err != nil {
+		log.Fatalf("Database initialisation error: %v", err)
+	}
 
-	host, err := server.New()
+	host, err := server.New(pool)
 	if err != nil {
 		log.Fatalf("Application failed to start with error: %v", err)
 	}

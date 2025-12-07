@@ -1,4 +1,4 @@
-package models
+package dto
 
 import (
 	"time"
@@ -6,7 +6,15 @@ import (
 	"coolbreez.lk/moderator/internal/constants"
 )
 
-type Event struct {
+type ErrorStdResponse struct {
+	Status  constants.RequestStatus `json: "status"`
+	Message string                  `json: "message"`
+	ErrorID string                  `json: "error_id"`
+	Details string                  `json: "details,omitempty"`
+	Time    time.Time               `json: "time"`
+}
+
+type EventResponse struct {
 	ID          int64               `json:"id"`
 	Name        string              `json:"name"`
 	Description string              `json:"description"`

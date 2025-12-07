@@ -9,32 +9,32 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var DB *pgxpool.Pool
+// var DB *pgxpool.Pool
 
-func InitDB() {
+func InitDB(ctx context.Context) (*pgxpool.Pool, error) {
 	dbConnectionString, err := config.GetDBConnectionString()
 	if err != nil {
-		log.Fatal("database connection string error", err)
+		return nil, err
 	}
 
 	config, err := pgxpool.ParseConfig(dbConnectionString)
 	if err != nil {
-		log.Fatal("Failed to parse DB config:", err)
+		return nil, err
 	}
 
 	config.MaxConns = 10
 	config.MinConns = 2
 	config.MaxConnLifetime = time.Hour
 
-	db, err := pgxpool.NewWithConfig(context.Background(), config)
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
-		log.Fatal("Failed to connect to DB:", err)
+		return nil, err
 	}
-	err = db.Ping(context.Background())
+	err = pool.Ping(context.Background())
 	if err != nil {
-		log.Fatal("DB ping failed:", err)
+		return nil, err
 	}
 
-	DB = db
 	log.Println("✅ Connected to PostgreSQL")
+	return pool, nil
 }

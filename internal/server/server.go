@@ -7,6 +7,7 @@ import (
 	"coolbreez.lk/moderator/config"
 	"coolbreez.lk/moderator/internal/routes"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Server struct {
@@ -14,7 +15,7 @@ type Server struct {
 	AppServer *gin.Engine
 }
 
-func New() (*Server, error) {
+func New(pool *pgxpool.Pool) (*Server, error) {
 	engine := gin.Default()
 	basePath, err := config.GetBasePath()
 	if err != nil {
@@ -23,7 +24,7 @@ func New() (*Server, error) {
 
 	routerGroup := engine.Group(basePath)
 	routes.RegisterHealthCheckRoutes(routerGroup)
-	routes.RegisterEventRoutes(routerGroup)
+	routes.RegisterEventRoutes(routerGroup, pool)
 
 	appPort, err := config.GetServerPort()
 	if err != nil {
