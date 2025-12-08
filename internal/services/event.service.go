@@ -19,7 +19,7 @@ func NewEventService(repo *repositories.EventReposiroty) *EventServiceImpl {
 }
 
 func (es *EventServiceImpl) CreateEvent(rc context.Context,
-	event dto.EventRequest) (*dto.EventResponse, error) {
+	event dto.EventRequest) error {
 
 	err := es.eventRepo.Create(rc, &models.Event{
 		Name:        event.Name,
@@ -29,7 +29,7 @@ func (es *EventServiceImpl) CreateEvent(rc context.Context,
 		Status:      event.Status,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &dto.EventResponse{}, nil
+	return nil
 }

@@ -1,4 +1,4 @@
-package constants
+package enums
 
 type EventCode string
 
@@ -15,4 +15,13 @@ type RequestStatus string
 const (
 	RequestSuccess RequestStatus = "SUCCESS"
 	RequestFailed  RequestStatus = "FAILED"
+)
+
+type UserRole string
+
+const (
+	RoleUser      UserRole = "USER"
+	RoleAdmin     UserRole = "ADMIN"
+	RoleModerator UserRole = "MODERATOR"
+	RoleSystem    UserRole = "SYSTEM"
 )

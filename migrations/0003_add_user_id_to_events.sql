@@ -1,14 +1,17 @@
 -- +goose Up
--- ALTER TABLE
---     events
--- ADD
---     COLUMN user_id BIGINT NOT NULL;
--- ALTER TABLE
---     events
--- ADD
---     CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+ALTER TABLE
+    events
+ADD
+    COLUMN user_id BIGINT NOT NULL;
+
+ALTER TABLE
+    events
+ADD
+    CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
 -- +goose Down
--- ALTER TABLE
---     events DROP CONSTRAINT IF EXISTS fk_events_user;
--- ALTER TABLE
---     events DROP COLUMN IF EXISTS user_id;
+ALTER TABLE
+    events DROP CONSTRAINT IF EXISTS fk_events_user;
+
+ALTER TABLE
+    events DROP COLUMN IF EXISTS user_id;

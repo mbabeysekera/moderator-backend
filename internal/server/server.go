@@ -25,6 +25,7 @@ func New(pool *pgxpool.Pool) (*Server, error) {
 	routerGroup := engine.Group(basePath)
 	routes.RegisterHealthCheckRoutes(routerGroup)
 	routes.RegisterEventRoutes(routerGroup, pool)
+	routes.RegisterUserRoutes(routerGroup, pool)
 
 	appPort, err := config.GetServerPort()
 	if err != nil {

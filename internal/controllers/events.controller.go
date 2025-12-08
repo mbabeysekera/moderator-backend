@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"time"
 
-	"coolbreez.lk/moderator/internal/constants"
+	enums "coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/dto"
 	"github.com/gin-gonic/gin"
 )
 
 type EventService interface {
-	CreateEvent(rc context.Context, event dto.EventRequest) (*dto.EventResponse, error)
+	CreateEvent(rc context.Context, event dto.EventRequest) error
 }
 
 type EventController struct {
@@ -29,8 +29,8 @@ func (ev *EventController) CreateEvent(c *gin.Context) {
 	var event dto.EventRequest
 	err := c.ShouldBindJSON(&event)
 	if err != nil {
-		c.JSON(http.StatusCreated, &dto.ErrorStdResponse{
-			Status:  constants.RequestFailed,
+		c.JSON(http.StatusBadRequest, &dto.ErrorStdResponse{
+			Status:  enums.RequestFailed,
 			Message: fmt.Sprintf("error from event.controller.create[DATA]: %v", c.Request.Body),
 			ErrorID: "ev_0000",
 			Details: fmt.Sprintf("ERROR: %v", err),
@@ -39,10 +39,10 @@ func (ev *EventController) CreateEvent(c *gin.Context) {
 		return
 	}
 
-	eventRes, err := ev.service.CreateEvent(c.Request.Context(), event)
+	err = ev.service.CreateEvent(c.Request.Context(), event)
 	if err != nil {
 		c.JSON(http.StatusCreated, &dto.ErrorStdResponse{
-			Status:  constants.RequestFailed,
+			Status:  enums.RequestFailed,
 			Message: "Event creation failed",
 			ErrorID: "ev_0001",
 			Details: fmt.Sprintf("ERROR: %v", err),
@@ -51,7 +51,7 @@ func (ev *EventController) CreateEvent(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, eventRes)
+	c.JSON(http.StatusCreated, gin.H{})
 }
 
 // func GetEventsByStatus(c *gin.Context) {

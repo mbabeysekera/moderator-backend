@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"coolbreez.lk/moderator/internal/constants"
+	enums "coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -45,7 +45,7 @@ func (eventRepo *EventReposiroty) Create(c context.Context, e *models.Event) err
 }
 
 func (eventRepo *EventReposiroty) GetEventsByStatus(c context.Context,
-	status constants.EventCode) ([]models.Event, error) {
+	status enums.EventCode) ([]models.Event, error) {
 
 	getEventByStatus := `SELECT 
 		id,
