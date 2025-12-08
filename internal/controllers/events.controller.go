@@ -1,24 +1,27 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
 
 	"coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/dto"
-	"coolbreez.lk/moderator/internal/services"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type EventController struct {
-	service *services.EventService
+type EventService interface {
+	CreateEvent(rc context.Context, event dto.EventRequest) (*dto.EventResponse, error)
 }
 
-func NewEventController(pool *pgxpool.Pool) *EventController {
+type EventController struct {
+	service EventService
+}
+
+func NewEventController(eventService EventService) *EventController {
 	return &EventController{
-		service: services.NewEventService(pool),
+		service: eventService,
 	}
 }
 

@@ -17,7 +17,7 @@ func NewEventRepository(dbPool *pgxpool.Pool) *EventReposiroty {
 	return &EventReposiroty{pool: dbPool}
 }
 
-func (eventRepo *EventReposiroty) Create(c context.Context, e models.Event) error {
+func (eventRepo *EventReposiroty) Create(c context.Context, e *models.Event) error {
 
 	evenCreate := `
 		INSERT INTO events (
