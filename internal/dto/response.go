@@ -10,13 +10,18 @@ type ErrorStdResponse struct {
 	Status  enums.RequestStatus `json:"status"`
 	Message string              `json:"message"`
 	ErrorID string              `json:"error_id"`
-	Details string              `json:"details,omitempty"`
 	Time    time.Time           `json:"time"`
 }
 
-type CreateStdResponse struct {
+type SuccessStdResponse struct {
 	Status  enums.RequestStatus `json:"status"`
 	Message string              `json:"message"`
 	Details string              `json:"details,omitempty"`
 	Time    time.Time           `json:"time"`
+}
+
+type UserLoginResponse struct {
+	Status      enums.RequestStatus `json:"status"`
+	AccessToken string              `json:"access_token"`
+	Time        time.Time           `json:"time"`
 }

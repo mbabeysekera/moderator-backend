@@ -36,3 +36,19 @@ func GetDBConnectionString() (string, error) {
 	}
 	return val, nil
 }
+
+func GetDeployEnv() (string, error) {
+	val, err := envVariableHandler("DEPLOY_ENV")
+	if err != nil {
+		return "", err
+	}
+	return val, nil
+}
+
+func GetJWTSecret() (string, error) {
+	val, err := envVariableHandler("JWT_SECRET")
+	if err != nil {
+		return "", err
+	}
+	return val, nil
+}
