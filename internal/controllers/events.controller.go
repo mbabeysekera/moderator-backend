@@ -33,7 +33,6 @@ func (ev *EventController) CreateEvent(c *gin.Context) {
 			Status:  enums.RequestFailed,
 			Message: fmt.Sprintf("error from event.controller.create[DATA]: %v", c.Request.Body),
 			ErrorID: "ev_0000",
-			Details: fmt.Sprintf("ERROR: %v", err),
 			Time:    time.Now(),
 		})
 		return
@@ -45,7 +44,6 @@ func (ev *EventController) CreateEvent(c *gin.Context) {
 			Status:  enums.RequestFailed,
 			Message: "Event creation failed",
 			ErrorID: "ev_0001",
-			Details: fmt.Sprintf("ERROR: %v", err),
 			Time:    time.Now(),
 		})
 		return

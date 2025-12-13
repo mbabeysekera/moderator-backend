@@ -13,8 +13,20 @@ type EventRequest struct {
 }
 
 type UserCreateRequest struct {
-	MobileNo string `json:"mobile_no"`
+	MobileNo string `json:"mobile_no" binding:"required,min=10,max=15,numeric"`
 	Email    string `json:"email,omitempty"`
-	Password string `json:"password"`
-	FullName string `json:"full_name"`
+	Password string `json:"password" binding:"required,min=8"`
+	FullName string `json:"full_name" binding:"max=128"`
+}
+
+type UserLoginRequest struct {
+	MobileNo string `json:"mobile_no" binding:"required,min=10,max=15,numeric"`
+	Password string `json:"password" binding:"required,min=8"`
+}
+
+type UserUpdateDetails struct {
+	ID       int64  `json:"id" binding:"required"`
+	MobileNo string `json:"mobile_no" binding:"required,min=10,max=15,numeric"`
+	Email    string `json:"email,omitempty"`
+	FullName string `json:"full_name" binding:"max=128"`
 }

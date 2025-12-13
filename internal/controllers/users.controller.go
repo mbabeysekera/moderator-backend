@@ -2,18 +2,18 @@ package controllers
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"errors"
+	"log/slog"
 	"net/http"
-	"time"
 
-	enums "coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/dto"
+	apperrors "coolbreez.lk/moderator/internal/errors"
+	"coolbreez.lk/moderator/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
 type UserService interface {
-	CreateUser(rc context.Context, newUser *dto.UserCreateRequest) error
+	UserUpdateDetails(rc context.Context, userNewDetails *dto.UserUpdateDetails) (*dto.SuccessStdResponse, error)
 }
 
 type UserController struct {
@@ -26,25 +26,45 @@ func NewUserController(userService UserService) *UserController {
 	}
 }
 
-func (uc *UserController) CreateUser(c *gin.Context) {
-	log.Printf("user create request")
-	var user dto.UserCreateRequest
-	c.ShouldBindJSON(&user)
-	err := uc.service.CreateUser(c.Request.Context(), &user)
+func (uc *UserController) UserDetailsUpdate(c *gin.Context) {
+	var userNewDetails dto.UserUpdateDetails
+	err := c.ShouldBindJSON(&userNewDetails)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, &dto.ErrorStdResponse{
-			Status:  enums.RequestFailed,
-			Message: fmt.Sprintf("error from user.controller.create[DATA]: %v", c.Request.Body),
-			ErrorID: "us_0000",
-			Details: fmt.Sprintf("ERROR: %v", err),
-			Time:    time.Now(),
-		})
+		slog.Error("user update details",
+			"err", err,
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"ip", c.ClientIP(),
+		)
+		c.JSON(http.StatusBadRequest, apperrors.AppStdErrorHandler(
+			"parameter validation failed",
+			"us_0000",
+		))
 		return
 	}
-	c.JSON(http.StatusCreated, &dto.CreateStdResponse{
-		Status:  enums.RequestSuccess,
-		Message: "User Created",
-		Details: "",
-		Time:    time.Now(),
-	})
+	updateRes, err := uc.service.UserUpdateDetails(c.Request.Context(), &userNewDetails)
+	if err != nil {
+		slog.Error("user details update",
+			"err", err,
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"mobile_no", userNewDetails.MobileNo,
+			"ip", c.ClientIP(),
+		)
+		if errors.Is(err, services.ErrUserDetailsUpdate) {
+			c.JSON(http.StatusBadRequest, apperrors.AppStdErrorHandler(
+				"User detais not updated",
+				"us_0001",
+			))
+			return
+		}
+		c.JSON(http.StatusInternalServerError,
+			apperrors.AppStdErrorHandler(
+				"Internal server error",
+				"us_0002",
+			),
+		)
+		return
+	}
+	c.JSON(http.StatusOK, updateRes)
 }
