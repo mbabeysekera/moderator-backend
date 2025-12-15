@@ -4,6 +4,7 @@ import (
 	"time"
 
 	enums "coolbreez.lk/moderator/internal/constants"
+	"coolbreez.lk/moderator/internal/repositories"
 )
 
 type ErrorStdResponse struct {
@@ -24,4 +25,8 @@ type UserLoginResponse struct {
 	Status      enums.RequestStatus `json:"status"`
 	AccessToken string              `json:"access_token"`
 	Time        time.Time           `json:"time"`
+}
+
+type ProductsWithItemsResponse struct {
+	All []repositories.ProductsWithItems `json:"all"`
 }

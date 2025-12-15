@@ -5,7 +5,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
+	enums "coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/dto"
 	apperrors "coolbreez.lk/moderator/internal/errors"
 	"coolbreez.lk/moderator/internal/services"
@@ -13,7 +15,7 @@ import (
 )
 
 type UserService interface {
-	UserUpdateDetails(rc context.Context, userNewDetails *dto.UserUpdateDetails) (*dto.SuccessStdResponse, error)
+	UserUpdateDetails(rc context.Context, userNewDetails *dto.UserUpdateDetails) error
 }
 
 type UserController struct {
@@ -42,7 +44,7 @@ func (uc *UserController) UserDetailsUpdate(c *gin.Context) {
 		))
 		return
 	}
-	updateRes, err := uc.service.UserUpdateDetails(c.Request.Context(), &userNewDetails)
+	err = uc.service.UserUpdateDetails(c.Request.Context(), &userNewDetails)
 	if err != nil {
 		slog.Error("user details update",
 			"err", err,
@@ -66,5 +68,10 @@ func (uc *UserController) UserDetailsUpdate(c *gin.Context) {
 		)
 		return
 	}
-	c.JSON(http.StatusOK, updateRes)
+	c.JSON(http.StatusOK, &dto.SuccessStdResponse{
+		Status:  enums.RequestSuccess,
+		Message: "refresh page to update details",
+		Details: "user details updated",
+		Time:    time.Now().UTC(),
+	})
 }

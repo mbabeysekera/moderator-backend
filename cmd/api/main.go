@@ -8,6 +8,7 @@ import (
 
 	"coolbreez.lk/moderator/config"
 	enums "coolbreez.lk/moderator/internal/constants"
+	"coolbreez.lk/moderator/internal/controllers"
 	"coolbreez.lk/moderator/internal/db"
 	"coolbreez.lk/moderator/internal/logger"
 	"coolbreez.lk/moderator/internal/middlewares"
@@ -35,8 +36,6 @@ func main() {
 	}
 
 	engine := gin.Default()
-	// engine.Use(gin.Logger())
-	// engine.Use(gin.Recovery())
 
 	basePath, err := config.GetBasePath()
 	if err != nil {
@@ -55,18 +54,34 @@ func main() {
 	rbacHandler := middlewares.CheckRBAC
 
 	userRepo := repositories.NewUserRepository(pool)
+	productItemsRepo := repositories.NewProductRepository(pool)
 
 	signUpService := services.NewSignUpService(userRepo)
 	loginService := services.NewLoginService(userRepo, jwtUtil)
 	userService := services.NewUserService(userRepo, jwtUtil)
+	productItemService := services.NewProductService(productItemsRepo)
 
+	signUpController := controllers.NewSignUpController(signUpService)
+	loginController := controllers.NewLoginController(loginService)
+	userController := controllers.NewUserController(userService)
+	productController := controllers.NewProductController(productItemService)
+
+	//Routes does not require Authorization
 	routerGroup := engine.Group(basePath)
 	routes.RegisterHealthCheckRoutes(routerGroup)
-	routes.RegisterSignUpRoutes(routerGroup, signUpService)
-	routes.RegisterLoginRoutes(routerGroup, loginService)
-	// routes.RegisterEventRoutes(routerGroup, pool)
-	secureRouterGroup := routerGroup.Group("/users")
-	routes.RegisterUserRoutes(secureRouterGroup, authorizationHandler(jwtUtil), rbacHandler(enums.RoleUser), userService)
+	routes.RegisterSignUpRoutes(routerGroup, signUpController)
+	routes.RegisterLoginRoutes(routerGroup, loginController)
+	routes.RegisterGeneralProductItemsRoutes(routerGroup, productController)
+
+	// Routes required Authorization
+	secureGeneralRouteGroup := routerGroup.Group("/app")
+	routes.RegisterUserRoutes(secureGeneralRouteGroup, authorizationHandler(jwtUtil),
+		rbacHandler(enums.RoleUser, enums.RoleAdmin), userController)
+
+	// Routes required Full ADMIN Authorization
+	secureAdminRouteGroup := routerGroup.Group("/moderator")
+	routes.RegisterAdminProductItemsRoutes(secureAdminRouteGroup, authorizationHandler(jwtUtil),
+		rbacHandler(enums.RoleAdmin), productController)
 
 	appPort, err := config.GetServerPort()
 	if err != nil {

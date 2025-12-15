@@ -50,7 +50,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 			"action", "create",
 			"mobile_no", newUser.MobileNo,
 		)
-		if errors.Is(err, repositories.ErrUserNotAffected) {
+		if errors.Is(err, repositories.ErrRowsNotAffected) {
 			return ErrUserDetailsUpdate
 		}
 		return err
