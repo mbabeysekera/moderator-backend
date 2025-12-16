@@ -2,15 +2,13 @@ package routes
 
 import (
 	"coolbreez.lk/moderator/internal/controllers"
-	"coolbreez.lk/moderator/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterUserRoutes(routerGroup *gin.RouterGroup,
 	authorizationHandler gin.HandlerFunc, rbacHandler gin.HandlerFunc,
-	service *services.UserServiceImpl) {
-	userController := controllers.NewUserController(service)
+	controller *controllers.UserController) {
 	routerGroup.Use(authorizationHandler)
 	routerGroup.Use(rbacHandler)
-	routerGroup.PATCH("/user", userController.UserDetailsUpdate)
+	routerGroup.PATCH("/users/update", controller.UserDetailsUpdate)
 }

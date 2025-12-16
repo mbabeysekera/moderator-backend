@@ -30,3 +30,17 @@ type UserUpdateDetails struct {
 	Email    string `json:"email,omitempty"`
 	FullName string `json:"full_name" binding:"max=128"`
 }
+
+type ItemCreateRequest struct {
+	ItemCode int    `json:"item_code"`
+	InStock  int    `json:"in_stock"`
+	ImageURL string `json:"image_url"`
+}
+
+type ProductsWithItemsRequest struct {
+	Title       string              `json:"title"`
+	Brand       string              `json:"brand"`
+	Sku         string              `json:"sku"`
+	Description string              `json:"description"`
+	Items       []ItemCreateRequest `json:"items"`
+}

@@ -10,8 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrUserNotAffected = errors.New("no rows affected")
-
 type UserRepository struct {
 	pool *pgxpool.Pool
 }
@@ -48,13 +46,13 @@ func (userRepo *UserRepository) Create(ctx context.Context, user *models.User) e
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		slog.Warn("db update user details",
+		slog.Warn("db insert user details",
 			"repository", "user",
-			"err", ErrUserNotAffected,
+			"err", ErrRowsNotAffected,
 			"query", userCreate,
 			"user_id", nil,
 		)
-		return ErrUserNotAffected
+		return ErrRowsNotAffected
 	}
 	return nil
 }
@@ -126,11 +124,11 @@ func (userRepo *UserRepository) IncrementUserLoginFailuresByID(ctx context.Conte
 	if tag.RowsAffected() == 0 {
 		slog.Warn("db update user details",
 			"repository", "user",
-			"err", ErrUserNotAffected,
+			"err", ErrRowsNotAffected,
 			"query", updateFailedLogin,
 			"user_id", userID,
 		)
-		return ErrUserNotAffected
+		return ErrRowsNotAffected
 	}
 	return nil
 }
@@ -157,11 +155,11 @@ func (userRepo *UserRepository) UpdateSuccessfulLoginByID(ctx context.Context,
 	if tag.RowsAffected() == 0 {
 		slog.Warn("db update user details",
 			"repository", "user",
-			"err", ErrUserNotAffected,
+			"err", ErrRowsNotAffected,
 			"query", updateLogin,
 			"user_id", userID,
 		)
-		return ErrUserNotAffected
+		return ErrRowsNotAffected
 	}
 	return nil
 }
@@ -188,11 +186,11 @@ func (userRepo *UserRepository) UpdateUserByID(ctx context.Context, user *models
 	if tag.RowsAffected() == 0 {
 		slog.Warn("db update user details",
 			"repository", "user",
-			"err", ErrUserNotAffected,
+			"err", ErrRowsNotAffected,
 			"query", userUpdate,
 			"user_id", user.ID,
 		)
-		return ErrUserNotAffected
+		return ErrRowsNotAffected
 	}
 	return nil
 }

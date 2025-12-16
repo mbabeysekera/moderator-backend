@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"time"
 
-	enums "coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/dto"
 	"coolbreez.lk/moderator/internal/repositories"
 	"coolbreez.lk/moderator/internal/utils"
@@ -26,7 +24,7 @@ func NewLoginService(repo *repositories.UserRepository, jwtSvc *utils.JWTUtil) *
 }
 
 func (ul *LoginServiceImpl) UserLogin(rc context.Context,
-	loginUser *dto.UserLoginRequest) (*dto.UserLoginResponse, error) {
+	loginUser *dto.UserLoginRequest) (string, error) {
 	user, err := ul.userRepo.GetUserByMobileNo(rc, loginUser.MobileNo)
 	if err != nil {
 		slog.Error("user retrieval error",
@@ -35,7 +33,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"action", "login",
 			"mobile_no", loginUser.MobileNo,
 		)
-		return nil, err
+		return "", err
 	}
 	if user == nil {
 		slog.Info("user does not exists",
@@ -43,10 +41,10 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"action", "login",
 			"mobile_no", loginUser.MobileNo,
 		)
-		return nil, ErrInvalidUser
+		return "", ErrInvalidUser
 	}
 	if user.FailedLoginAttempts >= 5 {
-		return nil, ErrUserLocked
+		return "", ErrUserLocked
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(loginUser.Password))
 	if err != nil {
@@ -58,25 +56,25 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 		)
 		nErr := ul.userRepo.IncrementUserLoginFailuresByID(rc, user.ID)
 		if nErr != nil {
-			if errors.Is(nErr, repositories.ErrUserNotAffected) {
-				return nil, ErrInvalidUser
+			if errors.Is(nErr, repositories.ErrRowsNotAffected) {
+				return "", ErrInvalidUser
 			}
-			return nil, nErr
+			return "", nErr
 		}
-		return nil, ErrInvalidUser
+		return "", ErrInvalidUser
 	}
 
 	accessToke, err := ul.jwtService.GenerateJWTToken(user.ID, user.Role)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = ul.userRepo.UpdateSuccessfulLoginByID(rc, user.ID)
 	if err != nil {
-		if errors.Is(err, repositories.ErrUserNotAffected) {
-			return nil, ErrInvalidUser
+		if errors.Is(err, repositories.ErrRowsNotAffected) {
+			return "", ErrInvalidUser
 		}
-		return nil, err
+		return "", err
 	}
 
 	slog.Info("user authenticated successfuly",
@@ -84,9 +82,5 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 		"action", "login",
 		"mobile_no", loginUser.MobileNo,
 	)
-	return &dto.UserLoginResponse{
-		Status:      enums.RequestSuccess,
-		AccessToken: accessToke,
-		Time:        time.Now().UTC(),
-	}, nil
+	return accessToke, nil
 }

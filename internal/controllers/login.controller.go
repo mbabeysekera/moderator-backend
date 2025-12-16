@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
+	enums "coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/dto"
 	apperrors "coolbreez.lk/moderator/internal/errors"
 	"coolbreez.lk/moderator/internal/services"
@@ -14,7 +16,7 @@ import (
 )
 
 type LoginService interface {
-	UserLogin(rc context.Context, loginUser *dto.UserLoginRequest) (*dto.UserLoginResponse, error)
+	UserLogin(rc context.Context, loginUser *dto.UserLoginRequest) (string, error)
 }
 
 type LoginController struct {
@@ -45,7 +47,7 @@ func (lc *LoginController) Login(c *gin.Context) {
 		)
 		return
 	}
-	loginRes, err := lc.service.UserLogin(c.Request.Context(), &loginUser)
+	token, err := lc.service.UserLogin(c.Request.Context(), &loginUser)
 	if err != nil {
 		slog.Error("user login unsuccessful",
 			"err", err,
@@ -83,5 +85,9 @@ func (lc *LoginController) Login(c *gin.Context) {
 		)
 		return
 	}
-	c.JSON(http.StatusOK, loginRes)
+	c.JSON(http.StatusOK, &dto.UserLoginResponse{
+		Status:      enums.RequestSuccess,
+		AccessToken: token,
+		Time:        time.Now().UTC(),
+	})
 }
