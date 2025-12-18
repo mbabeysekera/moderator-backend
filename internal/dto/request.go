@@ -38,9 +38,10 @@ type ItemCreateRequest struct {
 }
 
 type ProductsWithItemsRequest struct {
-	Title       string              `json:"title"`
-	Brand       string              `json:"brand"`
-	Sku         string              `json:"sku"`
-	Description string              `json:"description"`
-	Items       []ItemCreateRequest `json:"items"`
+	Title       string                `json:"title" binding:"required,max=24"`
+	Brand       string                `json:"brand" binding:"required,max=24"`
+	Category    enums.ProductCategory `json:"category" binding:"required"`
+	Sku         string                `json:"sku"`
+	Description string                `json:"description" binding:"required,max=64"`
+	Items       []ItemCreateRequest   `json:"items" binding:"required"`
 }
