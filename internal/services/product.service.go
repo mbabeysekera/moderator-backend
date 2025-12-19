@@ -36,6 +36,7 @@ func (ps *ProductServiceImpl) CreateProductWithItems(c context.Context,
 		Category:    productsWithItems.Category,
 		Sku:         productsWithItems.Sku,
 		Description: productsWithItems.Description,
+		Price:       productsWithItems.Price,
 		AddedBy:     addedBy,
 	}
 	items := make([]models.Item, 0)

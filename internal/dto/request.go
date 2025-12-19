@@ -43,5 +43,6 @@ type ProductsWithItemsRequest struct {
 	Category    enums.ProductCategory `json:"category" binding:"required"`
 	Sku         string                `json:"sku"`
 	Description string                `json:"description" binding:"required,max=64"`
+	Price       float64               `json:"price" binding:"required"`
 	Items       []ItemCreateRequest   `json:"items" binding:"required"`
 }

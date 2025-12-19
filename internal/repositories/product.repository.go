@@ -38,8 +38,8 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 	defer tx.Rollback(ctx)
 
 	const addProduct = `INSERT INTO  
-		products(title, brand, category, sku, description, added_by)
-		VALUES($1, $2, $3, $4, $5, $6)
+		products(title, brand, category, sku, description, price, added_by)
+		VALUES($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 	err = tx.QueryRow(ctx, addProduct,
@@ -48,6 +48,7 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 		product.Category,
 		product.Sku,
 		product.Description,
+		product.Price,
 		product.AddedBy,
 	).Scan(&product.ID)
 	if err != nil {
@@ -95,7 +96,7 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 	limit int64, offset int64) ([]ProductsWithItems, error) {
 
-	const getProducts = ` SELECT id, title, brand, category, sku, description, created_at
+	const getProducts = ` SELECT id, title, brand, category, sku, description, price, created_at
 			FROM products ORDER BY created_at DESC LIMIT $1 OFFSET $2
 		`
 	rows, err := pr.pool.Query(ctx, getProducts,
@@ -124,6 +125,7 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 			&productWithItems.Product.Category,
 			&productWithItems.Product.Sku,
 			&productWithItems.Product.Description,
+			&productWithItems.Product.Price,
 			&productWithItems.Product.CreatedAt,
 		)
 		if err != nil {
