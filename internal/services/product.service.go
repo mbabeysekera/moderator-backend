@@ -70,7 +70,7 @@ func (ps *ProductServiceImpl) CreateProductWithItems(c context.Context,
 }
 
 func (ps *ProductServiceImpl) GetProductsWithItems(c context.Context,
-	count string, page string) ([]repositories.ProductsWithItems, error) {
+	count string, page string) ([]repositories.ProductWithItems, error) {
 
 	limit, err := strconv.ParseInt(count, 10, 64)
 	if err != nil {
@@ -107,11 +107,51 @@ func (ps *ProductServiceImpl) GetProductsWithItems(c context.Context,
 	return productsWithItems, nil
 }
 
-func (ps *ProductServiceImpl) DeleteProductByID(c context.Context, productID int64) error {
+func (ps *ProductServiceImpl) GetProductWithItems(c context.Context,
+	id string) (*repositories.ProductWithItems, error) {
+	productID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		slog.Warn("products details fetch",
+			"service", "product",
+			"err", err,
+			"action", "fetch",
+		)
+		return nil, ErrInvalidParams
+	}
+	productWithItems, err := ps.productRepo.GetProductWithItemsByID(c, productID)
+	if productWithItems == nil {
+		slog.Info("product details fetch",
+			"service", "product",
+			"action", "fetch",
+			"product_id", productID,
+		)
+		return nil, ErrInvalidProduct
+	}
+	if err != nil {
+		slog.Error("product details fetch",
+			"service", "product",
+			"err", err,
+			"action", "fetch",
+		)
+		return nil, err
+	}
+	slog.Info("product details fetched",
+		"service", "product",
+		"action", "fetch",
+	)
+	return productWithItems, nil
+}
+
+func (ps *ProductServiceImpl) DeleteProductByID(c context.Context, id string) error {
+
+	productID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return ErrInvalidParams
+	}
 
 	deleteRequestedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
 
-	err := ps.productRepo.DeleteProductByID(c, productID, deleteRequestedBy)
+	err = ps.productRepo.DeleteProductByID(c, productID, deleteRequestedBy)
 	if err != nil {
 		slog.Error("products details delete",
 			"service", "product",

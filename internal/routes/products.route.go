@@ -17,4 +17,5 @@ func RegisterAdminProductItemsRoutes(routerGroup *gin.RouterGroup,
 func RegisterGeneralProductItemsRoutes(routerGroup *gin.RouterGroup,
 	controller *controllers.ProductController) {
 	routerGroup.GET("/products/all", controller.GetProductsWithItems)
+	routerGroup.GET("/products/:product_id", controller.GetProductWithItems)
 }
