@@ -4,6 +4,7 @@ import (
 	"time"
 
 	enums "coolbreez.lk/moderator/internal/constants"
+	"coolbreez.lk/moderator/internal/models"
 	"coolbreez.lk/moderator/internal/repositories"
 )
 
@@ -28,5 +29,10 @@ type UserLoginResponse struct {
 }
 
 type ProductsWithItemsResponse struct {
-	All []repositories.ProductsWithItems `json:"all"`
+	All []repositories.ProductWithItems `json:"all"`
+}
+
+type ProductWithItemsResponse struct {
+	Product models.Product `json:"product"`
+	Items   []models.Item  `json:"items"`
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 
 	enums "coolbreez.lk/moderator/internal/constants"
@@ -20,8 +19,10 @@ type ProductService interface {
 	CreateProductWithItems(c context.Context,
 		productsWithItems *dto.ProductsWithItemsRequest) error
 	GetProductsWithItems(c context.Context,
-		count string, page string) ([]repositories.ProductsWithItems, error)
-	DeleteProductByID(c context.Context, productID int64) error
+		count string, page string) ([]repositories.ProductWithItems, error)
+	GetProductWithItems(c context.Context,
+		id string) (*repositories.ProductWithItems, error)
+	DeleteProductByID(c context.Context, id string) error
 }
 
 type ProductController struct {
@@ -105,19 +106,65 @@ func (pc *ProductController) GetProductsWithItems(c *gin.Context) {
 	})
 }
 
-func (pc *ProductController) DeleteProductByID(c *gin.Context) {
-	productID, err := strconv.ParseInt(c.Param("product_id"), 10, 64)
+func (pc *ProductController) GetProductWithItems(c *gin.Context) {
+	productID := c.Param("product_id")
+	productsWithItems, err := pc.service.GetProductWithItems(c.Request.Context(), productID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest,
+		if errors.Is(err, services.ErrInvalidProduct) {
+			c.JSON(http.StatusBadRequest,
+				apperrors.AppStdErrorHandler(
+					services.ErrInvalidParams.Error(),
+					"us_0000",
+				),
+			)
+			return
+		}
+		if errors.Is(err, services.ErrInvalidParams) {
+			c.JSON(http.StatusBadRequest,
+				apperrors.AppStdErrorHandler(
+					services.ErrInvalidParams.Error(),
+					"us_0001",
+				),
+			)
+			return
+		}
+		if errors.Is(err, services.ErrProductFetch) {
+			c.JSON(http.StatusInternalServerError,
+				apperrors.AppStdErrorHandler(
+					services.ErrProductFetch.Error(),
+					"us_0002",
+				),
+			)
+			return
+		}
+		c.JSON(http.StatusInternalServerError,
 			apperrors.AppStdErrorHandler(
-				"invalid product id",
-				"us_0000",
+				"Internal server error",
+				"us_0003",
 			),
 		)
 		return
 	}
-	err = pc.service.DeleteProductByID(c.Request.Context(), productID)
+	c.JSON(http.StatusOK, &dto.ProductWithItemsResponse{
+		Product: productsWithItems.Product,
+		Items:   productsWithItems.Items,
+	})
+}
+
+func (pc *ProductController) DeleteProductByID(c *gin.Context) {
+	productID := c.Param("product_id")
+
+	err := pc.service.DeleteProductByID(c.Request.Context(), productID)
 	if err != nil {
+		if errors.Is(err, services.ErrInvalidParams) {
+			c.JSON(http.StatusBadRequest,
+				apperrors.AppStdErrorHandler(
+					services.ErrInvalidParams.Error(),
+					"us_0000",
+				),
+			)
+			return
+		}
 		if errors.Is(err, services.ErrProductDelete) {
 			c.JSON(http.StatusUnauthorized,
 				apperrors.AppStdErrorHandler(

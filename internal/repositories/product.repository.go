@@ -2,9 +2,11 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"coolbreez.lk/moderator/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -12,7 +14,7 @@ type ProductRepository struct {
 	pool *pgxpool.Pool
 }
 
-type ProductsWithItems struct {
+type ProductWithItems struct {
 	Product models.Product `json:"product"`
 	Items   []models.Item  `json:"items"`
 }
@@ -94,7 +96,7 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 }
 
 func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
-	limit int64, offset int64) ([]ProductsWithItems, error) {
+	limit int64, offset int64) ([]ProductWithItems, error) {
 
 	const getProducts = ` SELECT id, title, brand, category, sku, description, price, created_at
 			FROM products ORDER BY created_at DESC LIMIT $1 OFFSET $2
@@ -113,11 +115,11 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 	}
 	defer rows.Close()
 
-	var productsWithItems = make([]ProductsWithItems, 0)
-	var productsWithItemsMap = make(map[int64]ProductsWithItems)
+	var productsWithItems = make([]ProductWithItems, 0)
+	var productsWithItemsMap = make(map[int64]ProductWithItems)
 	var productIDs = make([]int64, 0)
 	for rows.Next() {
-		var productWithItems ProductsWithItems
+		var productWithItems ProductWithItems
 		err = rows.Scan(
 			&productWithItems.Product.ID,
 			&productWithItems.Product.Title,
@@ -178,7 +180,7 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 		)
 		if err != nil {
 			slog.Error("db rows",
-				"repository", "product",
+				"repository", "items",
 				"err", err,
 			)
 			return nil, ErrDBQuery
@@ -190,7 +192,7 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 	err = itemRows.Err()
 	if err != nil {
 		slog.Error("db rows",
-			"repository", "product",
+			"repository", "items",
 			"err", err,
 		)
 		return nil, ErrDBQuery
@@ -199,6 +201,70 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 		productsWithItems = append(productsWithItems, prod)
 	}
 	return productsWithItems, nil
+}
+
+func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
+	productID int64) (*ProductWithItems, error) {
+	const getProductByID = ` SELECT id, title, brand, category, sku, description, price, created_at
+			FROM products WHERE id = $1
+		`
+	productRow := pr.pool.QueryRow(ctx, getProductByID, productID)
+	var productWithItems ProductWithItems
+	err := productRow.Scan(
+		&productWithItems.Product.ID,
+		&productWithItems.Product.Title,
+		&productWithItems.Product.Brand,
+		&productWithItems.Product.Category,
+		&productWithItems.Product.Sku,
+		&productWithItems.Product.Description,
+		&productWithItems.Product.Price,
+		&productWithItems.Product.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		slog.Error("db rows",
+			"repository", "product",
+			"err", err,
+		)
+		return nil, ErrDBQuery
+	}
+	productWithItems.Items = make([]models.Item, 0)
+	const getItemsForProduct = `SELECT id, product_id, item_code, in_stock, image_url, created_at
+		FROM items WHERE product_id = $1
+	`
+	itemsRows, err := pr.pool.Query(ctx, getItemsForProduct, productID)
+	if err != nil {
+		slog.Error("db fetch",
+			"repository", "items",
+			"err", err,
+		)
+		return nil, ErrDBQuery
+	}
+	defer itemsRows.Close()
+
+	for itemsRows.Next() {
+		var item models.Item
+		itemsRows.Scan(
+			&item.ID,
+			&item.ProductID,
+			&item.ItemCode,
+			&item.InStock,
+			&item.ImageURL,
+			&item.CreatedAt,
+		)
+		productWithItems.Items = append(productWithItems.Items, item)
+	}
+	err = itemsRows.Err()
+	if err != nil {
+		slog.Error("db rows",
+			"repository", "items",
+			"err", err,
+		)
+		return nil, ErrDBQuery
+	}
+	return &productWithItems, nil
 }
 
 func (pr *ProductRepository) DeleteProductByID(ctx context.Context,
