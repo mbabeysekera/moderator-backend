@@ -25,3 +25,13 @@ const (
 	RoleModerator UserRole = "MODERATOR"
 	RoleSystem    UserRole = "SYSTEM"
 )
+
+type ProductCategory string
+
+const (
+	Earrings  ProductCategory = "EARRING"
+	Rings     ProductCategory = "RING"
+	Necklace  ProductCategory = "NECKLACE"
+	Bracelets ProductCategory = "BRACELET"
+	Pendants  ProductCategory = "PENDANT"
+)
