@@ -13,6 +13,7 @@ type Product struct {
 	Category    enums.ProductCategory `json:"category"`
 	Sku         string                `json:"sku"`
 	Description string                `json:"description"`
+	Price       float64               `json:"price"`
 	CreatedAt   time.Time             `json:"created_at"`
 	AddedBy     int64                 `json:"-"`
 }
