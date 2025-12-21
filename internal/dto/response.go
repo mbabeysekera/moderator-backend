@@ -28,6 +28,13 @@ type UserLoginResponse struct {
 	Time        time.Time           `json:"time"`
 }
 
+type SessionIntrospection struct {
+	Status enums.RequestStatus `json:"status"`
+	UserID int64               `json:"id"`
+	Role   enums.UserRole      `json:"role"`
+	Time   time.Time           `json:"time"`
+}
+
 type ProductsWithItemsResponse struct {
 	All []repositories.ProductWithItems `json:"all"`
 }

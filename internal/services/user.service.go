@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"coolbreez.lk/moderator/internal/dto"
+	"coolbreez.lk/moderator/internal/middlewares"
 	"coolbreez.lk/moderator/internal/models"
 	"coolbreez.lk/moderator/internal/repositories"
 	"coolbreez.lk/moderator/internal/utils"
@@ -50,4 +51,25 @@ func (us *UserServiceImpl) UserUpdateDetails(rc context.Context,
 		"mobile_no", userNewDetails.MobileNo,
 	)
 	return nil
+}
+
+func (us *UserServiceImpl) GetUserByID(rc context.Context) (*dto.UserSessionIntrospection,
+	error) {
+	userID := rc.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+	user, err := us.userRepo.GetUserByID(rc, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, ErrInvalidUser
+	}
+	slog.Info("user details fetch",
+		"service", "user",
+		"action", "fetch",
+		"user_id", user.ID,
+	)
+	return &dto.UserSessionIntrospection{
+		UserID: user.ID,
+		Role:   user.Role,
+	}, nil
 }

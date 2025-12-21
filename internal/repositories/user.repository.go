@@ -194,3 +194,27 @@ func (userRepo *UserRepository) UpdateUserByID(ctx context.Context, user *models
 	}
 	return nil
 }
+
+func (userRepo *UserRepository) GetUserByID(ctx context.Context,
+	userID int64) (*models.User, error) {
+	const getUserByID = `SELECT id, role FROM users WHERE id = $1`
+	userRow := userRepo.pool.QueryRow(ctx, getUserByID, userID)
+	var user models.User
+	err := userRow.Scan(
+		&user.ID,
+		&user.Role,
+	)
+	if err != nil {
+		slog.Error("db update user details",
+			"repository", "user",
+			"err", err,
+			"query", getUserByID,
+			"user_id", userID,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, ErrDBQuery
+	}
+	return &user, nil
+}

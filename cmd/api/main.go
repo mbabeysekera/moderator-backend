@@ -75,13 +75,15 @@ func main() {
 
 	// Routes required Authorization
 	secureGeneralRouteGroup := routerGroup.Group("/app")
-	routes.RegisterUserRoutes(secureGeneralRouteGroup, authorizationHandler(jwtUtil),
+	routes.RegisterAuthUserRoutes(secureGeneralRouteGroup, authorizationHandler(jwtUtil),
 		rbacHandler(enums.RoleUser, enums.RoleAdmin), userController)
 
 	// Routes required Full ADMIN Authorization
 	secureAdminRouteGroup := routerGroup.Group("/moderator")
 	routes.RegisterAdminProductItemsRoutes(secureAdminRouteGroup, authorizationHandler(jwtUtil),
 		rbacHandler(enums.RoleAdmin), productController)
+	routes.RegisterAdminUserRoutes(secureAdminRouteGroup, authorizationHandler(jwtUtil),
+		rbacHandler(enums.RoleAdmin), userController)
 
 	appPort, err := config.GetServerPort()
 	if err != nil {
