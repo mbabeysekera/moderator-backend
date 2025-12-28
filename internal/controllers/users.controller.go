@@ -16,6 +16,7 @@ import (
 
 type UserService interface {
 	UserUpdateDetails(rc context.Context, userNewDetails *dto.UserUpdateDetails) error
+	GetUserByID(rc context.Context) (*dto.UserSessionIntrospection, error)
 }
 
 type UserController struct {
@@ -73,5 +74,40 @@ func (uc *UserController) UserDetailsUpdate(c *gin.Context) {
 		Message: "refresh page to update details",
 		Details: "user details updated",
 		Time:    time.Now().UTC(),
+	})
+}
+
+func (uc *UserController) UserSessionIntrospection(c *gin.Context) {
+	userSessionIntros, err := uc.service.GetUserByID(c.Request.Context())
+	if err != nil {
+		slog.Error("user details update",
+			"err", err,
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"user_id", "",
+			"ip", c.ClientIP(),
+		)
+		if errors.Is(err, services.ErrInvalidUser) {
+			c.JSON(http.StatusBadRequest,
+				apperrors.AppStdErrorHandler(
+					services.ErrInvalidUser.Error(),
+					"us_0000",
+				),
+			)
+			return
+		}
+		c.JSON(http.StatusInternalServerError,
+			apperrors.AppStdErrorHandler(
+				"Internal server error",
+				"us_0001",
+			),
+		)
+		return
+	}
+	c.JSON(http.StatusOK, &dto.SessionIntrospection{
+		Status: enums.RequestSuccess,
+		UserID: userSessionIntros.UserID,
+		Role:   userSessionIntros.Role,
+		Time:   time.Now().UTC(),
 	})
 }
