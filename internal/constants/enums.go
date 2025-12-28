@@ -34,4 +34,5 @@ const (
 	Necklace  ProductCategory = "NECKLACE"
 	Bracelets ProductCategory = "BRACELET"
 	Pendants  ProductCategory = "PENDANT"
+	All       ProductCategory = "ALL"
 )

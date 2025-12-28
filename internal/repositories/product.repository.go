@@ -3,8 +3,10 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
+	enums "coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -96,14 +98,25 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 }
 
 func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
-	limit int64, offset int64) ([]ProductWithItems, error) {
+	limit int64, offset int64, category enums.ProductCategory) ([]ProductWithItems, error) {
 
-	const getProducts = ` SELECT id, title, brand, category, sku, description, price, created_at
-			FROM products ORDER BY created_at DESC LIMIT $1 OFFSET $2
+	getProducts := `SELECT id, title, brand, category, sku, description, price, created_at
+			FROM products
 		`
+	args := make([]any, 0)
+	argPosition := 1
+
+	if category != enums.ProductCategory("ALL") {
+		getProducts += fmt.Sprintf(" WHERE category = $%d", argPosition)
+		args = append(args, string(category))
+		argPosition++
+	}
+
+	getProducts += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argPosition, argPosition+1)
+	args = append(args, fmt.Sprint(limit), fmt.Sprint(offset))
+
 	rows, err := pr.pool.Query(ctx, getProducts,
-		limit,
-		offset,
+		args...,
 	)
 	if err != nil {
 		slog.Error("db fetch",
@@ -221,13 +234,13 @@ func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 		&productWithItems.Product.CreatedAt,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
 		slog.Error("db rows",
 			"repository", "product",
 			"err", err,
 		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, ErrDBQuery
 	}
 	productWithItems.Items = make([]models.Item, 0)
@@ -292,4 +305,127 @@ func (pr *ProductRepository) DeleteProductByID(ctx context.Context,
 		return ErrRowsNotAffected
 	}
 	return nil
+}
+
+func (pr *ProductRepository) GetProductBySku(ctx context.Context,
+	sku string) (*ProductWithItems, error) {
+
+	const getProductBySku = `SELECT id, title, brand, category, sku, description, price, created_at
+			FROM products WHERE sku = $1
+		`
+	productRow := pr.pool.QueryRow(ctx, getProductBySku, sku)
+	var productWithItems ProductWithItems
+	err := productRow.Scan(
+		&productWithItems.Product.ID,
+		&productWithItems.Product.Title,
+		&productWithItems.Product.Brand,
+		&productWithItems.Product.Category,
+		&productWithItems.Product.Sku,
+		&productWithItems.Product.Description,
+		&productWithItems.Product.Price,
+		&productWithItems.Product.CreatedAt,
+	)
+	if err != nil {
+		slog.Error("db rows",
+			"repository", "product",
+			"err", err,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, ErrDBQuery
+	}
+	productWithItems.Items = make([]models.Item, 0)
+	const getItemsForProduct = `SELECT id, product_id, item_code, in_stock, image_url, created_at
+		FROM items WHERE product_id = $1
+	`
+	itemsRows, err := pr.pool.Query(ctx, getItemsForProduct, productWithItems.Product.ID)
+	if err != nil {
+		slog.Error("db fetch",
+			"repository", "items",
+			"err", err,
+		)
+		return nil, ErrDBQuery
+	}
+	defer itemsRows.Close()
+
+	for itemsRows.Next() {
+		var item models.Item
+		itemsRows.Scan(
+			&item.ID,
+			&item.ProductID,
+			&item.ItemCode,
+			&item.InStock,
+			&item.ImageURL,
+			&item.CreatedAt,
+		)
+		productWithItems.Items = append(productWithItems.Items, item)
+	}
+	err = itemsRows.Err()
+	if err != nil {
+		slog.Error("db rows",
+			"repository", "items",
+			"err", err,
+		)
+		return nil, ErrDBQuery
+	}
+	return &productWithItems, nil
+}
+
+func (pr *ProductRepository) GetProductByItemCode(ctx context.Context,
+	itemCode int64) (*ProductWithItems, error) {
+
+	const getItemByCode = `SELECT id, product_id, item_code, in_stock, image_url, created_at
+		FROM items WHERE item_code = $1
+	`
+	itemRow := pr.pool.QueryRow(ctx, getItemByCode, itemCode)
+	var item models.Item
+	err := itemRow.Scan(
+		&item.ID,
+		&item.ProductID,
+		&item.ItemCode,
+		&item.InStock,
+		&item.ImageURL,
+		&item.CreatedAt,
+	)
+	if err != nil {
+		slog.Error("db rows",
+			"repository", "items",
+			"err", err,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, ErrDBQuery
+	}
+
+	const getProductByID = `SELECT id, title, brand, category, sku, description, price, created_at
+			FROM products WHERE id = $1
+		`
+	productRow := pr.pool.QueryRow(ctx, getProductByID, item.ProductID)
+	var productWithItems ProductWithItems
+	err = productRow.Scan(
+		&productWithItems.Product.ID,
+		&productWithItems.Product.Title,
+		&productWithItems.Product.Brand,
+		&productWithItems.Product.Category,
+		&productWithItems.Product.Sku,
+		&productWithItems.Product.Description,
+		&productWithItems.Product.Price,
+		&productWithItems.Product.CreatedAt,
+	)
+	if err != nil {
+		slog.Error("db rows",
+			"repository", "product",
+			"err", err,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, ErrDBQuery
+	}
+	productWithItems.Items = make([]models.Item, 0)
+	productWithItems.Items = append(productWithItems.Items, item)
+
+	return &productWithItems, nil
 }

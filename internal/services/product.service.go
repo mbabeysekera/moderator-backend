@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strconv"
 
+	enums "coolbreez.lk/moderator/internal/constants"
 	"coolbreez.lk/moderator/internal/dto"
 	"coolbreez.lk/moderator/internal/middlewares"
 	"coolbreez.lk/moderator/internal/models"
@@ -70,7 +71,7 @@ func (ps *ProductServiceImpl) CreateProductWithItems(c context.Context,
 }
 
 func (ps *ProductServiceImpl) GetProductsWithItems(c context.Context,
-	count string, page string) ([]repositories.ProductWithItems, error) {
+	count string, page string, category enums.ProductCategory) ([]repositories.ProductWithItems, error) {
 
 	limit, err := strconv.ParseInt(count, 10, 64)
 	if err != nil {
@@ -91,7 +92,7 @@ func (ps *ProductServiceImpl) GetProductsWithItems(c context.Context,
 		return nil, ErrProductFetch
 	}
 	offset := (pageNo - 1) * limit
-	productsWithItems, err := ps.productRepo.GetProductsWithItems(c, limit, offset)
+	productsWithItems, err := ps.productRepo.GetProductsWithItems(c, limit, offset, category)
 	if err != nil {
 		slog.Error("products details fetch",
 			"service", "product",
@@ -168,4 +169,61 @@ func (ps *ProductServiceImpl) DeleteProductByID(c context.Context, id string) er
 		"action", "delete",
 	)
 	return nil
+}
+
+func (ps *ProductServiceImpl) GetProductWithItemsBySku(c context.Context,
+	sku string) (*repositories.ProductWithItems, error) {
+	productWithItems, err := ps.productRepo.GetProductBySku(c, sku)
+	if productWithItems == nil {
+		slog.Info("product details fetch",
+			"service", "product",
+			"action", "fetch",
+			"product_sku", sku,
+		)
+		return nil, ErrInvalidProduct
+	}
+	if err != nil {
+		slog.Error("product details fetch",
+			"service", "product",
+			"err", err,
+			"action", "fetch",
+		)
+		return nil, err
+	}
+	slog.Info("product details fetched",
+		"service", "product",
+		"action", "fetch",
+	)
+	return productWithItems, nil
+}
+
+func (ps *ProductServiceImpl) GetProductWithItemsByItemCode(c context.Context,
+	code string) (*repositories.ProductWithItems, error) {
+	itemCode, err := strconv.ParseInt(code, 10, 64)
+	if err != nil {
+		return nil, ErrInvalidParams
+	}
+
+	productWithItems, err := ps.productRepo.GetProductByItemCode(c, itemCode)
+	if productWithItems == nil {
+		slog.Info("product details fetch",
+			"service", "product",
+			"action", "fetch",
+			"item_code", itemCode,
+		)
+		return nil, ErrInvalidProduct
+	}
+	if err != nil {
+		slog.Error("product details fetch",
+			"service", "product",
+			"err", err,
+			"action", "fetch",
+		)
+		return nil, err
+	}
+	slog.Info("product details fetched",
+		"service", "product",
+		"action", "fetch",
+	)
+	return productWithItems, nil
 }
