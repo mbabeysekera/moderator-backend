@@ -429,3 +429,31 @@ func (pr *ProductRepository) GetProductByItemCode(ctx context.Context,
 
 	return &productWithItems, nil
 }
+
+func (pr *ProductRepository) GetTotalProductsCount(ctx context.Context,
+	category enums.ProductCategory) (int64, error) {
+
+	countProducts := `SELECT count(*) FROM products`
+
+	args := []any{}
+	argPos := 1
+
+	if category != enums.ProductCategory("ALL") {
+		countProducts += fmt.Sprintf(" WHERE category = $%d", argPos)
+		args = append(args, category)
+	}
+
+	rowCount := pr.pool.QueryRow(ctx, countProducts, args...)
+	var count int64
+	err := rowCount.Scan(&count)
+	if err != nil {
+		slog.Error("db fetch",
+			"repository", "product",
+			"err", err,
+			"query", countProducts,
+		)
+		return 0, ErrDBQuery
+	}
+
+	return count, nil
+}
