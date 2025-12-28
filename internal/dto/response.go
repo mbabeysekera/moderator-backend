@@ -36,7 +36,8 @@ type SessionIntrospection struct {
 }
 
 type ProductsWithItemsResponse struct {
-	All []repositories.ProductWithItems `json:"all"`
+	All   []repositories.ProductWithItems `json:"all"`
+	Count int                             `json:"count"`
 }
 
 type ProductWithItemsResponse struct {

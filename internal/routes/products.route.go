@@ -18,4 +18,6 @@ func RegisterGeneralProductItemsRoutes(routerGroup *gin.RouterGroup,
 	controller *controllers.ProductController) {
 	routerGroup.GET("/products/all", controller.GetProductsWithItems)
 	routerGroup.GET("/products/:product_id", controller.GetProductWithItems)
+	routerGroup.GET("/products/sku/:sku", controller.GetProductWithItemsBySku)
+	routerGroup.GET("/products/item/:item_code", controller.GetProductWithItemsByItemCode)
 }

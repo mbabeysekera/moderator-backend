@@ -19,10 +19,14 @@ type ProductService interface {
 	CreateProductWithItems(c context.Context,
 		productsWithItems *dto.ProductsWithItemsRequest) error
 	GetProductsWithItems(c context.Context,
-		count string, page string) ([]repositories.ProductWithItems, error)
+		count string, page string, category enums.ProductCategory) ([]repositories.ProductWithItems, error)
 	GetProductWithItems(c context.Context,
 		id string) (*repositories.ProductWithItems, error)
 	DeleteProductByID(c context.Context, id string) error
+	GetProductWithItemsBySku(c context.Context,
+		sku string) (*repositories.ProductWithItems, error)
+	GetProductWithItemsByItemCode(c context.Context,
+		code string) (*repositories.ProductWithItems, error)
 }
 
 type ProductController struct {
@@ -82,7 +86,9 @@ func (pc *ProductController) CreateProductWithItems(c *gin.Context) {
 func (pc *ProductController) GetProductsWithItems(c *gin.Context) {
 	count := c.DefaultQuery("count", "10")
 	page := c.DefaultQuery("page", "1")
-	productsWithItems, err := pc.service.GetProductsWithItems(c.Request.Context(), count, page)
+	category := c.DefaultQuery("category", "ALL")
+	productsWithItems, err := pc.service.GetProductsWithItems(c.Request.Context(), count, page,
+		enums.ProductCategory(category))
 	if err != nil {
 		if errors.Is(err, services.ErrProductFetch) {
 			c.JSON(http.StatusInternalServerError,
@@ -102,7 +108,8 @@ func (pc *ProductController) GetProductsWithItems(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, &dto.ProductsWithItemsResponse{
-		All: productsWithItems,
+		All:   productsWithItems,
+		Count: len(productsWithItems),
 	})
 }
 
@@ -113,7 +120,7 @@ func (pc *ProductController) GetProductWithItems(c *gin.Context) {
 		if errors.Is(err, services.ErrInvalidProduct) {
 			c.JSON(http.StatusBadRequest,
 				apperrors.AppStdErrorHandler(
-					services.ErrInvalidParams.Error(),
+					services.ErrInvalidProduct.Error(),
 					"us_0000",
 				),
 			)
@@ -128,19 +135,10 @@ func (pc *ProductController) GetProductWithItems(c *gin.Context) {
 			)
 			return
 		}
-		if errors.Is(err, services.ErrProductFetch) {
-			c.JSON(http.StatusInternalServerError,
-				apperrors.AppStdErrorHandler(
-					services.ErrProductFetch.Error(),
-					"us_0002",
-				),
-			)
-			return
-		}
 		c.JSON(http.StatusInternalServerError,
 			apperrors.AppStdErrorHandler(
 				"Internal server error",
-				"us_0003",
+				"us_0002",
 			),
 		)
 		return
@@ -183,4 +181,67 @@ func (pc *ProductController) DeleteProductByID(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
+}
+
+func (pc *ProductController) GetProductWithItemsBySku(c *gin.Context) {
+	sku := c.Param("sku")
+	productsWithItems, err := pc.service.GetProductWithItemsBySku(c.Request.Context(), sku)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidProduct) {
+			c.JSON(http.StatusBadRequest,
+				apperrors.AppStdErrorHandler(
+					services.ErrInvalidProduct.Error(),
+					"us_0000",
+				),
+			)
+			return
+		}
+		c.JSON(http.StatusInternalServerError,
+			apperrors.AppStdErrorHandler(
+				"Internal server error",
+				"us_0001",
+			),
+		)
+		return
+	}
+	c.JSON(http.StatusOK, &dto.ProductWithItemsResponse{
+		Product: productsWithItems.Product,
+		Items:   productsWithItems.Items,
+	})
+}
+
+func (pc *ProductController) GetProductWithItemsByItemCode(c *gin.Context) {
+	itemCode := c.Param("item_code")
+	productsWithItems, err := pc.service.GetProductWithItemsByItemCode(c.Request.Context(), itemCode)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidParams) {
+			c.JSON(http.StatusBadRequest,
+				apperrors.AppStdErrorHandler(
+					services.ErrInvalidParams.Error(),
+					"us_0000",
+				),
+			)
+			return
+		}
+		if errors.Is(err, services.ErrInvalidProduct) {
+			c.JSON(http.StatusBadRequest,
+				apperrors.AppStdErrorHandler(
+					services.ErrInvalidProduct.Error(),
+					"us_0001",
+				),
+			)
+			return
+		}
+		c.JSON(http.StatusInternalServerError,
+			apperrors.AppStdErrorHandler(
+				"Internal server error",
+				"us_0002",
+			),
+		)
+		return
+	}
+	c.JSON(http.StatusOK, &dto.ProductWithItemsResponse{
+		Product: productsWithItems.Product,
+		Items:   productsWithItems.Items,
+	})
 }
