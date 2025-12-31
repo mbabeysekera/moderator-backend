@@ -20,8 +20,6 @@ WORKDIR /root/
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/main .
-# Copy your .env file into the container
-COPY .env .
 
 EXPOSE 8080
 

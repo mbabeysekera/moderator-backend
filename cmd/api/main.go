@@ -21,13 +21,13 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(".env file not found")
-	}
-
 	logger.New()
 	slog.Info("Application Starting...")
+
+	err := godotenv.Load()
+	if err != nil {
+		slog.Info(".env file not found")
+	}
 
 	ctx := context.Background()
 	pool, err := db.InitDB(ctx)
