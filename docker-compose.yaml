@@ -4,5 +4,15 @@ services:
     container_name: moderator
     ports:
       - "8080:8080"
-    environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=${POSTGRES_SSLMODE}
+      - APP_SERVER_PORT=8080
+      - APP_BASE_PATH=/api/v1
+      - DEPLOY_ENV=production
+      - JWT_SECRET=
+      - POSTGRES_USER=vacmuser
+      - POSTGRES_PASSWORD=
+      - POSTGRES_DB=moderator
+      - POSTGRES_PORT=5432
+      - POSTGRES_SSLMODE=disable
+      - POSTGRES_HOST=postgres
+      # Construct the URL using the literal values or .env references
+      - DATABASE_URL=
