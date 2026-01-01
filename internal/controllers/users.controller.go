@@ -105,9 +105,10 @@ func (uc *UserController) UserSessionIntrospection(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, &dto.SessionIntrospection{
-		Status: enums.RequestSuccess,
-		UserID: userSessionIntros.UserID,
-		Role:   userSessionIntros.Role,
-		Time:   time.Now().UTC(),
+		Status:   enums.RequestSuccess,
+		UserID:   userSessionIntros.UserID,
+		FullName: userSessionIntros.FullName,
+		Role:     userSessionIntros.Role,
+		Time:     time.Now().UTC(),
 	})
 }

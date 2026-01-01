@@ -69,7 +69,8 @@ func (us *UserServiceImpl) GetUserByID(rc context.Context) (*dto.UserSessionIntr
 		"user_id", user.ID,
 	)
 	return &dto.UserSessionIntrospection{
-		UserID: user.ID,
-		Role:   user.Role,
+		UserID:   user.ID,
+		FullName: user.FullName,
+		Role:     user.Role,
 	}, nil
 }

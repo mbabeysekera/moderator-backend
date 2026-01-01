@@ -29,10 +29,11 @@ type UserLoginResponse struct {
 }
 
 type SessionIntrospection struct {
-	Status enums.RequestStatus `json:"status"`
-	UserID int64               `json:"id"`
-	Role   enums.UserRole      `json:"role"`
-	Time   time.Time           `json:"time"`
+	Status   enums.RequestStatus `json:"status"`
+	UserID   int64               `json:"id"`
+	FullName string              `json:"full_name"`
+	Role     enums.UserRole      `json:"role"`
+	Time     time.Time           `json:"time"`
 }
 
 type ProductsWithItemsResponse struct {
