@@ -197,11 +197,12 @@ func (userRepo *UserRepository) UpdateUserByID(ctx context.Context, user *models
 
 func (userRepo *UserRepository) GetUserByID(ctx context.Context,
 	userID int64) (*models.User, error) {
-	const getUserByID = `SELECT id, role FROM users WHERE id = $1`
+	const getUserByID = `SELECT id, full_name, role FROM users WHERE id = $1`
 	userRow := userRepo.pool.QueryRow(ctx, getUserByID, userID)
 	var user models.User
 	err := userRow.Scan(
 		&user.ID,
+		&user.FullName,
 		&user.Role,
 	)
 	if err != nil {
