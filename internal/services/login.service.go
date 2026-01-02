@@ -24,7 +24,7 @@ func NewLoginService(repo *repositories.UserRepository, jwtSvc *utils.JWTUtil) *
 }
 
 func (ul *LoginServiceImpl) UserLogin(rc context.Context,
-	loginUser *dto.UserLoginRequest) (string, error) {
+	loginUser *dto.UserLoginRequest) (*dto.UserLoginRequiredFields, error) {
 	user, err := ul.userRepo.GetUserByMobileNo(rc, loginUser.MobileNo)
 	if err != nil {
 		slog.Error("user retrieval error",
@@ -33,7 +33,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"action", "login",
 			"mobile_no", loginUser.MobileNo,
 		)
-		return "", err
+		return nil, err
 	}
 	if user == nil {
 		slog.Info("user does not exists",
@@ -41,10 +41,10 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"action", "login",
 			"mobile_no", loginUser.MobileNo,
 		)
-		return "", ErrInvalidUser
+		return nil, ErrInvalidUser
 	}
 	if user.FailedLoginAttempts >= 5 {
-		return "", ErrUserLocked
+		return nil, ErrUserLocked
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(loginUser.Password))
 	if err != nil {
@@ -57,24 +57,24 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 		nErr := ul.userRepo.IncrementUserLoginFailuresByID(rc, user.ID)
 		if nErr != nil {
 			if errors.Is(nErr, repositories.ErrRowsNotAffected) {
-				return "", ErrInvalidUser
+				return nil, ErrInvalidUser
 			}
-			return "", nErr
+			return nil, nErr
 		}
-		return "", ErrInvalidUser
+		return nil, ErrInvalidUser
 	}
 
 	accessToke, err := ul.jwtService.GenerateJWTToken(user.ID, user.Role)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	err = ul.userRepo.UpdateSuccessfulLoginByID(rc, user.ID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrRowsNotAffected) {
-			return "", ErrInvalidUser
+			return nil, ErrInvalidUser
 		}
-		return "", err
+		return nil, err
 	}
 
 	slog.Info("user authenticated successfuly",
@@ -82,5 +82,10 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 		"action", "login",
 		"mobile_no", loginUser.MobileNo,
 	)
-	return accessToke, nil
+	return &dto.UserLoginRequiredFields{
+		UserID:      user.ID,
+		FullName:    user.FullName,
+		Role:        user.Role,
+		AccessToken: accessToke,
+	}, nil
 }
