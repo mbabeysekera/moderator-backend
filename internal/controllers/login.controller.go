@@ -16,7 +16,8 @@ import (
 )
 
 type LoginService interface {
-	UserLogin(rc context.Context, loginUser *dto.UserLoginRequest) (string, error)
+	UserLogin(rc context.Context,
+		loginUser *dto.UserLoginRequest) (*dto.UserLoginRequiredFields, error)
 }
 
 type LoginController struct {
@@ -47,7 +48,7 @@ func (lc *LoginController) Login(c *gin.Context) {
 		)
 		return
 	}
-	token, err := lc.service.UserLogin(c.Request.Context(), &loginUser)
+	loginRequiredFields, err := lc.service.UserLogin(c.Request.Context(), &loginUser)
 	if err != nil {
 		slog.Error("user login unsuccessful",
 			"err", err,
@@ -87,7 +88,10 @@ func (lc *LoginController) Login(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, &dto.UserLoginResponse{
 		Status:      enums.RequestSuccess,
-		AccessToken: token,
+		AccessToken: loginRequiredFields.AccessToken,
+		UserID:      loginRequiredFields.UserID,
+		FullName:    loginRequiredFields.FullName,
+		Role:        loginRequiredFields.Role,
 		Time:        time.Now().UTC(),
 	})
 }
