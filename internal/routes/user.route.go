@@ -11,6 +11,7 @@ func RegisterAuthUserRoutes(routerGroup *gin.RouterGroup,
 	routerGroup.Use(authorizationHandler)
 	routerGroup.Use(rbacHandler)
 	routerGroup.PATCH("/users/update", controller.UserDetailsUpdate)
+	routerGroup.GET("/introspect", controller.UserSessionIntrospection)
 }
 
 func RegisterAdminUserRoutes(routerGroup *gin.RouterGroup,
