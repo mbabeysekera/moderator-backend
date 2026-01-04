@@ -25,8 +25,6 @@ type ProductService interface {
 	DeleteProductByID(c context.Context, id string) error
 	GetProductWithItemsBySku(c context.Context,
 		sku string) (*repositories.ProductWithItems, error)
-	GetProductWithItemsByItemCode(c context.Context,
-		code string) (*repositories.ProductWithItems, error)
 }
 
 type ProductController struct {
@@ -200,42 +198,6 @@ func (pc *ProductController) GetProductWithItemsBySku(c *gin.Context) {
 			apperrors.AppStdErrorHandler(
 				"Internal server error",
 				"us_0001",
-			),
-		)
-		return
-	}
-	c.JSON(http.StatusOK, &dto.ProductWithItemsResponse{
-		Product: productsWithItems.Product,
-		Items:   productsWithItems.Items,
-	})
-}
-
-func (pc *ProductController) GetProductWithItemsByItemCode(c *gin.Context) {
-	itemCode := c.Param("item_code")
-	productsWithItems, err := pc.service.GetProductWithItemsByItemCode(c.Request.Context(), itemCode)
-	if err != nil {
-		if errors.Is(err, services.ErrInvalidParams) {
-			c.JSON(http.StatusBadRequest,
-				apperrors.AppStdErrorHandler(
-					services.ErrInvalidParams.Error(),
-					"us_0000",
-				),
-			)
-			return
-		}
-		if errors.Is(err, services.ErrInvalidProduct) {
-			c.JSON(http.StatusBadRequest,
-				apperrors.AppStdErrorHandler(
-					services.ErrInvalidProduct.Error(),
-					"us_0001",
-				),
-			)
-			return
-		}
-		c.JSON(http.StatusInternalServerError,
-			apperrors.AppStdErrorHandler(
-				"Internal server error",
-				"us_0002",
 			),
 		)
 		return

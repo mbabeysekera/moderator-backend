@@ -39,12 +39,11 @@ func (ps *ProductServiceImpl) CreateProductWithItems(c context.Context,
 		Description: productsWithItems.Description,
 		Price:       productsWithItems.Price,
 		AddedBy:     addedBy,
+		InStock:     productsWithItems.InStock,
 	}
 	items := make([]models.Item, 0)
 	for _, item := range productsWithItems.Items {
 		item := &models.Item{
-			ItemCode: item.ItemCode,
-			InStock:  item.InStock,
 			ImageURL: item.ImageURL,
 		}
 		items = append(items, *item)
@@ -179,37 +178,6 @@ func (ps *ProductServiceImpl) GetProductWithItemsBySku(c context.Context,
 			"service", "product",
 			"action", "fetch",
 			"product_sku", sku,
-		)
-		return nil, ErrInvalidProduct
-	}
-	if err != nil {
-		slog.Error("product details fetch",
-			"service", "product",
-			"err", err,
-			"action", "fetch",
-		)
-		return nil, err
-	}
-	slog.Info("product details fetched",
-		"service", "product",
-		"action", "fetch",
-	)
-	return productWithItems, nil
-}
-
-func (ps *ProductServiceImpl) GetProductWithItemsByItemCode(c context.Context,
-	code string) (*repositories.ProductWithItems, error) {
-	itemCode, err := strconv.ParseInt(code, 10, 64)
-	if err != nil {
-		return nil, ErrInvalidParams
-	}
-
-	productWithItems, err := ps.productRepo.GetProductByItemCode(c, itemCode)
-	if productWithItems == nil {
-		slog.Info("product details fetch",
-			"service", "product",
-			"action", "fetch",
-			"item_code", itemCode,
 		)
 		return nil, ErrInvalidProduct
 	}
