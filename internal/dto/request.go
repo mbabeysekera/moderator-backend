@@ -45,3 +45,9 @@ type ProductsWithItemsRequest struct {
 	InStock     int                   `json:"in_stock"`
 	Items       []ItemCreateRequest   `json:"items" binding:"required"`
 }
+
+type ProductDetailsUpdateRequest struct {
+	ID      int64    `json:"id" binding:"required"`
+	Price   *float64 `json:"price,omitempty"`
+	InStock *int     `json:"in_stock,omitempty"`
+}

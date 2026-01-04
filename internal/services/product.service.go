@@ -18,7 +18,8 @@ type ProductServiceImpl struct {
 	productRepo *repositories.ProductRepository
 }
 
-var ErrProductItemCreateFailed = errors.New("product items failed")
+var ErrProductItemCreateFailed = errors.New("product items create failed")
+var ErrProductItemUpdateFailed = errors.New("product items update failed")
 
 func NewProductService(repo *repositories.ProductRepository) *ProductServiceImpl {
 	return &ProductServiceImpl{
@@ -194,4 +195,56 @@ func (ps *ProductServiceImpl) GetProductWithItemsBySku(c context.Context,
 		"action", "fetch",
 	)
 	return productWithItems, nil
+}
+
+func (ps *ProductServiceImpl) UpdateProductStock(c context.Context,
+	stock int, productID int64) error {
+
+	updatedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+
+	err := ps.productRepo.UpdateProductStockByID(c, stock, productID)
+	if err != nil {
+		slog.Error("products details update",
+			"service", "product",
+			"err", err,
+			"action", "update",
+			"added_by", updatedBy,
+		)
+		if errors.Is(err, repositories.ErrRowsNotAffected) {
+			return ErrProductItemUpdateFailed
+		}
+		return err
+	}
+	slog.Info("products details update",
+		"service", "product",
+		"action", "update",
+		"added_by", updatedBy,
+	)
+	return nil
+}
+
+func (ps *ProductServiceImpl) UpdateProductPrice(c context.Context,
+	price float64, productID int64) error {
+
+	updatedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+
+	err := ps.productRepo.UpdateProductPriceByID(c, price, productID)
+	if err != nil {
+		slog.Error("products details update",
+			"service", "product",
+			"err", err,
+			"action", "update",
+			"added_by", updatedBy,
+		)
+		if errors.Is(err, repositories.ErrRowsNotAffected) {
+			return ErrProductItemUpdateFailed
+		}
+		return err
+	}
+	slog.Info("products details update",
+		"service", "product",
+		"action", "update",
+		"added_by", updatedBy,
+	)
+	return nil
 }

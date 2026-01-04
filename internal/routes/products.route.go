@@ -12,6 +12,7 @@ func RegisterAdminProductItemsRoutes(routerGroup *gin.RouterGroup,
 	routerGroup.Use(rbacHandler)
 	routerGroup.POST("/products/create", controller.CreateProductWithItems)
 	routerGroup.DELETE("/products/delete/:product_id", controller.DeleteProductByID)
+	routerGroup.PATCH("/product/update", controller.UpdateProduct)
 }
 
 func RegisterGeneralProductItemsRoutes(routerGroup *gin.RouterGroup,

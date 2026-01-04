@@ -397,3 +397,53 @@ func (pr *ProductRepository) GetTotalProductsCount(ctx context.Context,
 
 	return count, nil
 }
+
+func (pr *ProductRepository) UpdateProductStockByID(ctx context.Context,
+	stock int, productID int64) error {
+	const updateProduct = `UPDATE products SET in_stock = $1 WHERE id = $2`
+	tag, err := pr.pool.Exec(ctx, updateProduct, stock, productID)
+	if err != nil {
+		slog.Error("db update",
+			"repository", "product",
+			"err", err,
+			"query", updateProduct,
+			"product_id", productID,
+		)
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		slog.Warn("db insert item details",
+			"repository", "product",
+			"err", ErrRowsNotAffected,
+			"query", updateProduct,
+			"product_id", productID,
+		)
+		return ErrRowsNotAffected
+	}
+	return nil
+}
+
+func (pr *ProductRepository) UpdateProductPriceByID(ctx context.Context,
+	price float64, productID int64) error {
+	const updateProduct = `UPDATE products SET price = $1 WHERE id = $2`
+	tag, err := pr.pool.Exec(ctx, updateProduct, price, productID)
+	if err != nil {
+		slog.Error("db update",
+			"repository", "product",
+			"err", err,
+			"query", updateProduct,
+			"product_id", productID,
+		)
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		slog.Warn("db insert item details",
+			"repository", "product",
+			"err", ErrRowsNotAffected,
+			"query", updateProduct,
+			"product_id", productID,
+		)
+		return ErrRowsNotAffected
+	}
+	return nil
+}

@@ -25,6 +25,8 @@ type ProductService interface {
 	DeleteProductByID(c context.Context, id string) error
 	GetProductWithItemsBySku(c context.Context,
 		sku string) (*repositories.ProductWithItems, error)
+	UpdateProductStock(c context.Context, stock int, productID int64) error
+	UpdateProductPrice(c context.Context, price float64, productID int64) error
 }
 
 type ProductController struct {
@@ -50,7 +52,7 @@ func (pc *ProductController) CreateProductWithItems(c *gin.Context) {
 		c.JSON(http.StatusBadRequest,
 			apperrors.AppStdErrorHandler(
 				"parameter validation failed",
-				"us_0000",
+				"ps_0000",
 			),
 		)
 		return
@@ -61,7 +63,7 @@ func (pc *ProductController) CreateProductWithItems(c *gin.Context) {
 			c.JSON(http.StatusConflict,
 				apperrors.AppStdErrorHandler(
 					services.ErrProductItemCreateFailed.Error(),
-					"us_0001",
+					"ps_0001",
 				),
 			)
 			return
@@ -69,7 +71,7 @@ func (pc *ProductController) CreateProductWithItems(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError,
 			apperrors.AppStdErrorHandler(
 				"Internal server error",
-				"us_0001",
+				"ps_0001",
 			),
 		)
 		return
@@ -92,7 +94,7 @@ func (pc *ProductController) GetProductsWithItems(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError,
 				apperrors.AppStdErrorHandler(
 					services.ErrProductFetch.Error(),
-					"us_0000",
+					"ps_0000",
 				),
 			)
 			return
@@ -100,7 +102,7 @@ func (pc *ProductController) GetProductsWithItems(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError,
 			apperrors.AppStdErrorHandler(
 				"Internal server error",
-				"us_0001",
+				"ps_0001",
 			),
 		)
 		return
@@ -119,7 +121,7 @@ func (pc *ProductController) GetProductWithItems(c *gin.Context) {
 			c.JSON(http.StatusBadRequest,
 				apperrors.AppStdErrorHandler(
 					services.ErrInvalidProduct.Error(),
-					"us_0000",
+					"ps_0000",
 				),
 			)
 			return
@@ -128,7 +130,7 @@ func (pc *ProductController) GetProductWithItems(c *gin.Context) {
 			c.JSON(http.StatusBadRequest,
 				apperrors.AppStdErrorHandler(
 					services.ErrInvalidParams.Error(),
-					"us_0001",
+					"ps_0001",
 				),
 			)
 			return
@@ -136,7 +138,7 @@ func (pc *ProductController) GetProductWithItems(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError,
 			apperrors.AppStdErrorHandler(
 				"Internal server error",
-				"us_0002",
+				"ps_0002",
 			),
 		)
 		return
@@ -156,7 +158,7 @@ func (pc *ProductController) DeleteProductByID(c *gin.Context) {
 			c.JSON(http.StatusBadRequest,
 				apperrors.AppStdErrorHandler(
 					services.ErrInvalidParams.Error(),
-					"us_0000",
+					"ps_0000",
 				),
 			)
 			return
@@ -165,7 +167,7 @@ func (pc *ProductController) DeleteProductByID(c *gin.Context) {
 			c.JSON(http.StatusUnauthorized,
 				apperrors.AppStdErrorHandler(
 					services.ErrProductDelete.Error(),
-					"us_0001",
+					"ps_0001",
 				),
 			)
 			return
@@ -173,7 +175,7 @@ func (pc *ProductController) DeleteProductByID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError,
 			apperrors.AppStdErrorHandler(
 				"Internal server error",
-				"us_0002",
+				"ps_0002",
 			),
 		)
 		return
@@ -189,7 +191,7 @@ func (pc *ProductController) GetProductWithItemsBySku(c *gin.Context) {
 			c.JSON(http.StatusBadRequest,
 				apperrors.AppStdErrorHandler(
 					services.ErrInvalidProduct.Error(),
-					"us_0000",
+					"ps_0000",
 				),
 			)
 			return
@@ -197,7 +199,7 @@ func (pc *ProductController) GetProductWithItemsBySku(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError,
 			apperrors.AppStdErrorHandler(
 				"Internal server error",
-				"us_0001",
+				"ps_0001",
 			),
 		)
 		return
@@ -205,5 +207,96 @@ func (pc *ProductController) GetProductWithItemsBySku(c *gin.Context) {
 	c.JSON(http.StatusOK, &dto.ProductWithItemsResponse{
 		Product: productsWithItems.Product,
 		Items:   productsWithItems.Items,
+	})
+}
+
+func (pc *ProductController) UpdateProduct(c *gin.Context) {
+	var productDetailsToBeUpdated dto.ProductDetailsUpdateRequest
+	err := c.ShouldBindJSON(&productDetailsToBeUpdated)
+	if err != nil {
+		slog.Error("productDetailsToBeUpdated parameter validation",
+			"err", err,
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"ip", c.ClientIP(),
+		)
+		c.JSON(http.StatusBadRequest,
+			apperrors.AppStdErrorHandler(
+				"parameter validation failed",
+				"ps_0000",
+			),
+		)
+		return
+	}
+	if productDetailsToBeUpdated.Price != nil {
+		errPrice := pc.service.UpdateProductPrice(c.Request.Context(),
+			*productDetailsToBeUpdated.Price, productDetailsToBeUpdated.ID)
+		if errPrice != nil {
+			slog.Error("price update",
+				"err", err,
+				"method", c.Request.Method,
+				"path", c.Request.URL.Path,
+				"ip", c.ClientIP(),
+			)
+			if errors.Is(errPrice, services.ErrProductItemUpdateFailed) {
+				c.JSON(http.StatusNotFound,
+					apperrors.AppStdErrorHandler(
+						services.ErrProductItemUpdateFailed.Error(),
+						"ps_0000",
+					),
+				)
+				return
+			}
+			c.JSON(http.StatusInternalServerError,
+				apperrors.AppStdErrorHandler(
+					"Internal server error",
+					"ps_0001",
+				),
+			)
+			return
+		}
+	}
+	if productDetailsToBeUpdated.InStock != nil {
+		errStock := pc.service.UpdateProductStock(c.Request.Context(),
+			*productDetailsToBeUpdated.InStock, productDetailsToBeUpdated.ID)
+		if errStock != nil {
+			slog.Error("price update",
+				"err", err,
+				"method", c.Request.Method,
+				"path", c.Request.URL.Path,
+				"ip", c.ClientIP(),
+			)
+			if errors.Is(errStock, services.ErrProductItemUpdateFailed) {
+				c.JSON(http.StatusNotFound,
+					apperrors.AppStdErrorHandler(
+						services.ErrProductItemUpdateFailed.Error(),
+						"ps_0002",
+					),
+				)
+				return
+			}
+			c.JSON(http.StatusInternalServerError,
+				apperrors.AppStdErrorHandler(
+					"Internal server error",
+					"ps_0003",
+				),
+			)
+			return
+		}
+	}
+	if productDetailsToBeUpdated.Price == nil &&
+		productDetailsToBeUpdated.InStock == nil {
+		c.JSON(http.StatusBadRequest,
+			apperrors.AppStdErrorHandler(
+				"price or stock must be set",
+				"ps_0004",
+			),
+		)
+		return
+	}
+	c.JSON(http.StatusOK, &dto.SuccessStdResponse{
+		Status:  enums.RequestSuccess,
+		Message: "product updated",
+		Time:    time.Now().UTC(),
 	})
 }
