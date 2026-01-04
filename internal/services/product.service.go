@@ -18,7 +18,8 @@ type ProductServiceImpl struct {
 	productRepo *repositories.ProductRepository
 }
 
-var ErrProductItemCreateFailed = errors.New("product items failed")
+var ErrProductItemCreateFailed = errors.New("product items create failed")
+var ErrProductItemUpdateFailed = errors.New("product items update failed")
 
 func NewProductService(repo *repositories.ProductRepository) *ProductServiceImpl {
 	return &ProductServiceImpl{
@@ -39,12 +40,11 @@ func (ps *ProductServiceImpl) CreateProductWithItems(c context.Context,
 		Description: productsWithItems.Description,
 		Price:       productsWithItems.Price,
 		AddedBy:     addedBy,
+		InStock:     productsWithItems.InStock,
 	}
 	items := make([]models.Item, 0)
 	for _, item := range productsWithItems.Items {
 		item := &models.Item{
-			ItemCode: item.ItemCode,
-			InStock:  item.InStock,
 			ImageURL: item.ImageURL,
 		}
 		items = append(items, *item)
@@ -197,33 +197,54 @@ func (ps *ProductServiceImpl) GetProductWithItemsBySku(c context.Context,
 	return productWithItems, nil
 }
 
-func (ps *ProductServiceImpl) GetProductWithItemsByItemCode(c context.Context,
-	code string) (*repositories.ProductWithItems, error) {
-	itemCode, err := strconv.ParseInt(code, 10, 64)
-	if err != nil {
-		return nil, ErrInvalidParams
-	}
+func (ps *ProductServiceImpl) UpdateProductStock(c context.Context,
+	stock int, productID int64) error {
 
-	productWithItems, err := ps.productRepo.GetProductByItemCode(c, itemCode)
-	if productWithItems == nil {
-		slog.Info("product details fetch",
-			"service", "product",
-			"action", "fetch",
-			"item_code", itemCode,
-		)
-		return nil, ErrInvalidProduct
-	}
+	updatedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+
+	err := ps.productRepo.UpdateProductStockByID(c, stock, productID)
 	if err != nil {
-		slog.Error("product details fetch",
+		slog.Error("products details update",
 			"service", "product",
 			"err", err,
-			"action", "fetch",
+			"action", "update",
+			"added_by", updatedBy,
 		)
-		return nil, err
+		if errors.Is(err, repositories.ErrRowsNotAffected) {
+			return ErrProductItemUpdateFailed
+		}
+		return err
 	}
-	slog.Info("product details fetched",
+	slog.Info("products details update",
 		"service", "product",
-		"action", "fetch",
+		"action", "update",
+		"added_by", updatedBy,
 	)
-	return productWithItems, nil
+	return nil
+}
+
+func (ps *ProductServiceImpl) UpdateProductPrice(c context.Context,
+	price float64, productID int64) error {
+
+	updatedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+
+	err := ps.productRepo.UpdateProductPriceByID(c, price, productID)
+	if err != nil {
+		slog.Error("products details update",
+			"service", "product",
+			"err", err,
+			"action", "update",
+			"added_by", updatedBy,
+		)
+		if errors.Is(err, repositories.ErrRowsNotAffected) {
+			return ErrProductItemUpdateFailed
+		}
+		return err
+	}
+	slog.Info("products details update",
+		"service", "product",
+		"action", "update",
+		"added_by", updatedBy,
+	)
+	return nil
 }

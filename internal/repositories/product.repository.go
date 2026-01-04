@@ -42,8 +42,8 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 	defer tx.Rollback(ctx)
 
 	const addProduct = `INSERT INTO  
-		products(title, brand, category, sku, description, price, added_by)
-		VALUES($1, $2, $3, $4, $5, $6, $7)
+		products(title, brand, category, sku, description, price, added_by, in_stock)
+		VALUES($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
 	`
 	err = tx.QueryRow(ctx, addProduct,
@@ -54,6 +54,7 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 		product.Description,
 		product.Price,
 		product.AddedBy,
+		product.InStock,
 	).Scan(&product.ID)
 	if err != nil {
 		slog.Error("db insert",
@@ -65,14 +66,12 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 		return err
 	}
 	const addItems = `INSERT INTO
-		items(product_id, item_code, in_stock, image_url)
-		VALUES($1, $2, $3, $4)
+		items(product_id, image_url)
+		VALUES($1, $2)
 	`
 	for _, item := range items {
 		tag, err := tx.Exec(ctx, addItems,
 			product.ID,
-			item.ItemCode,
-			item.InStock,
 			item.ImageURL,
 		)
 		if err != nil {
@@ -100,7 +99,7 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 	limit int64, offset int64, category enums.ProductCategory) ([]ProductWithItems, error) {
 
-	getProducts := `SELECT id, title, brand, category, sku, description, price, created_at
+	getProducts := `SELECT id, title, brand, category, sku, description, price, created_at, in_stock
 			FROM products
 		`
 	args := make([]any, 0)
@@ -142,6 +141,7 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 			&productWithItems.Product.Description,
 			&productWithItems.Product.Price,
 			&productWithItems.Product.CreatedAt,
+			&productWithItems.Product.InStock,
 		)
 		if err != nil {
 			slog.Error("db rows",
@@ -167,7 +167,7 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 		return productsWithItems, nil
 	}
 
-	const getItemsForProduct = `SELECT id, product_id, item_code, in_stock, image_url, created_at
+	const getItemsForProduct = `SELECT id, product_id, image_url, created_at
 		FROM items WHERE product_id = ANY($1)
 	`
 	itemRows, err := pr.pool.Query(ctx, getItemsForProduct, productIDs)
@@ -186,8 +186,6 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 		err = itemRows.Scan(
 			&item.ID,
 			&item.ProductID,
-			&item.ItemCode,
-			&item.InStock,
 			&item.ImageURL,
 			&item.CreatedAt,
 		)
@@ -218,7 +216,8 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 
 func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 	productID int64) (*ProductWithItems, error) {
-	const getProductByID = ` SELECT id, title, brand, category, sku, description, price, created_at
+	const getProductByID = ` SELECT id, title, brand, category, sku, description, price, created_at,
+			in_stock 
 			FROM products WHERE id = $1
 		`
 	productRow := pr.pool.QueryRow(ctx, getProductByID, productID)
@@ -232,6 +231,7 @@ func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 		&productWithItems.Product.Description,
 		&productWithItems.Product.Price,
 		&productWithItems.Product.CreatedAt,
+		&productWithItems.Product.InStock,
 	)
 	if err != nil {
 		slog.Error("db rows",
@@ -244,7 +244,7 @@ func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 		return nil, ErrDBQuery
 	}
 	productWithItems.Items = make([]models.Item, 0)
-	const getItemsForProduct = `SELECT id, product_id, item_code, in_stock, image_url, created_at
+	const getItemsForProduct = `SELECT id, product_id, image_url, created_at
 		FROM items WHERE product_id = $1
 	`
 	itemsRows, err := pr.pool.Query(ctx, getItemsForProduct, productID)
@@ -262,8 +262,6 @@ func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 		itemsRows.Scan(
 			&item.ID,
 			&item.ProductID,
-			&item.ItemCode,
-			&item.InStock,
 			&item.ImageURL,
 			&item.CreatedAt,
 		)
@@ -310,7 +308,8 @@ func (pr *ProductRepository) DeleteProductByID(ctx context.Context,
 func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 	sku string) (*ProductWithItems, error) {
 
-	const getProductBySku = `SELECT id, title, brand, category, sku, description, price, created_at
+	const getProductBySku = `SELECT id, title, brand, category, sku, description, price, created_at,
+			in_stock
 			FROM products WHERE sku = $1
 		`
 	productRow := pr.pool.QueryRow(ctx, getProductBySku, sku)
@@ -324,6 +323,7 @@ func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 		&productWithItems.Product.Description,
 		&productWithItems.Product.Price,
 		&productWithItems.Product.CreatedAt,
+		&productWithItems.Product.InStock,
 	)
 	if err != nil {
 		slog.Error("db rows",
@@ -336,7 +336,7 @@ func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 		return nil, ErrDBQuery
 	}
 	productWithItems.Items = make([]models.Item, 0)
-	const getItemsForProduct = `SELECT id, product_id, item_code, in_stock, image_url, created_at
+	const getItemsForProduct = `SELECT id, product_id, image_url, created_at
 		FROM items WHERE product_id = $1
 	`
 	itemsRows, err := pr.pool.Query(ctx, getItemsForProduct, productWithItems.Product.ID)
@@ -354,8 +354,6 @@ func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 		itemsRows.Scan(
 			&item.ID,
 			&item.ProductID,
-			&item.ItemCode,
-			&item.InStock,
 			&item.ImageURL,
 			&item.CreatedAt,
 		)
@@ -369,64 +367,6 @@ func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 		)
 		return nil, ErrDBQuery
 	}
-	return &productWithItems, nil
-}
-
-func (pr *ProductRepository) GetProductByItemCode(ctx context.Context,
-	itemCode int64) (*ProductWithItems, error) {
-
-	const getItemByCode = `SELECT id, product_id, item_code, in_stock, image_url, created_at
-		FROM items WHERE item_code = $1
-	`
-	itemRow := pr.pool.QueryRow(ctx, getItemByCode, itemCode)
-	var item models.Item
-	err := itemRow.Scan(
-		&item.ID,
-		&item.ProductID,
-		&item.ItemCode,
-		&item.InStock,
-		&item.ImageURL,
-		&item.CreatedAt,
-	)
-	if err != nil {
-		slog.Error("db rows",
-			"repository", "items",
-			"err", err,
-		)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, ErrDBQuery
-	}
-
-	const getProductByID = `SELECT id, title, brand, category, sku, description, price, created_at
-			FROM products WHERE id = $1
-		`
-	productRow := pr.pool.QueryRow(ctx, getProductByID, item.ProductID)
-	var productWithItems ProductWithItems
-	err = productRow.Scan(
-		&productWithItems.Product.ID,
-		&productWithItems.Product.Title,
-		&productWithItems.Product.Brand,
-		&productWithItems.Product.Category,
-		&productWithItems.Product.Sku,
-		&productWithItems.Product.Description,
-		&productWithItems.Product.Price,
-		&productWithItems.Product.CreatedAt,
-	)
-	if err != nil {
-		slog.Error("db rows",
-			"repository", "product",
-			"err", err,
-		)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, ErrDBQuery
-	}
-	productWithItems.Items = make([]models.Item, 0)
-	productWithItems.Items = append(productWithItems.Items, item)
-
 	return &productWithItems, nil
 }
 
@@ -456,4 +396,54 @@ func (pr *ProductRepository) GetTotalProductsCount(ctx context.Context,
 	}
 
 	return count, nil
+}
+
+func (pr *ProductRepository) UpdateProductStockByID(ctx context.Context,
+	stock int, productID int64) error {
+	const updateProduct = `UPDATE products SET in_stock = $1 WHERE id = $2`
+	tag, err := pr.pool.Exec(ctx, updateProduct, stock, productID)
+	if err != nil {
+		slog.Error("db update",
+			"repository", "product",
+			"err", err,
+			"query", updateProduct,
+			"product_id", productID,
+		)
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		slog.Warn("db insert item details",
+			"repository", "product",
+			"err", ErrRowsNotAffected,
+			"query", updateProduct,
+			"product_id", productID,
+		)
+		return ErrRowsNotAffected
+	}
+	return nil
+}
+
+func (pr *ProductRepository) UpdateProductPriceByID(ctx context.Context,
+	price float64, productID int64) error {
+	const updateProduct = `UPDATE products SET price = $1 WHERE id = $2`
+	tag, err := pr.pool.Exec(ctx, updateProduct, price, productID)
+	if err != nil {
+		slog.Error("db update",
+			"repository", "product",
+			"err", err,
+			"query", updateProduct,
+			"product_id", productID,
+		)
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		slog.Warn("db insert item details",
+			"repository", "product",
+			"err", ErrRowsNotAffected,
+			"query", updateProduct,
+			"product_id", productID,
+		)
+		return ErrRowsNotAffected
+	}
+	return nil
 }

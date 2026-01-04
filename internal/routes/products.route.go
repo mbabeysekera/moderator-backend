@@ -12,6 +12,7 @@ func RegisterAdminProductItemsRoutes(routerGroup *gin.RouterGroup,
 	routerGroup.Use(rbacHandler)
 	routerGroup.POST("/products/create", controller.CreateProductWithItems)
 	routerGroup.DELETE("/products/delete/:product_id", controller.DeleteProductByID)
+	routerGroup.PATCH("/product/update", controller.UpdateProduct)
 }
 
 func RegisterGeneralProductItemsRoutes(routerGroup *gin.RouterGroup,
@@ -19,5 +20,4 @@ func RegisterGeneralProductItemsRoutes(routerGroup *gin.RouterGroup,
 	routerGroup.GET("/products/all", controller.GetProductsWithItems)
 	routerGroup.GET("/products/:product_id", controller.GetProductWithItems)
 	routerGroup.GET("/products/sku/:sku", controller.GetProductWithItemsBySku)
-	routerGroup.GET("/products/item/:item_code", controller.GetProductWithItemsByItemCode)
 }

@@ -32,8 +32,6 @@ type UserUpdateDetails struct {
 }
 
 type ItemCreateRequest struct {
-	ItemCode int    `json:"item_code"`
-	InStock  int    `json:"in_stock"`
 	ImageURL string `json:"image_url"`
 }
 
@@ -44,5 +42,12 @@ type ProductsWithItemsRequest struct {
 	Sku         string                `json:"sku"`
 	Description string                `json:"description" binding:"required,max=64"`
 	Price       float64               `json:"price" binding:"required"`
+	InStock     int                   `json:"in_stock"`
 	Items       []ItemCreateRequest   `json:"items" binding:"required"`
+}
+
+type ProductDetailsUpdateRequest struct {
+	ID      int64    `json:"id" binding:"required"`
+	Price   *float64 `json:"price,omitempty"`
+	InStock *int     `json:"in_stock,omitempty"`
 }
