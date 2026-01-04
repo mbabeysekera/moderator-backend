@@ -24,12 +24,11 @@ func NewItemRepository(dbPool *pgxpool.Pool) *ItemRepository {
 func (ir *ItemRepository) Create(ctx context.Context, item *models.Item) error {
 	const createItem = `INSERT INTO items (
 		product_id,
-		item_code, 
 		image_url,
 	)
-	VALUES($1, $2, $3)
+	VALUES($1, $2)
 	`
-	tag, err := ir.pool.Exec(ctx, createItem, item.ProductID, item.ItemCode, item.ImageURL)
+	tag, err := ir.pool.Exec(ctx, createItem, item.ProductID, item.ImageURL)
 	if err != nil {
 		slog.Error("db insert",
 			"repository", "item",
