@@ -188,7 +188,7 @@ func (pc *ProductController) GetProductWithItemsBySku(c *gin.Context) {
 	productsWithItems, err := pc.service.GetProductWithItemsBySku(c.Request.Context(), sku)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidProduct) {
-			c.JSON(http.StatusBadRequest,
+			c.JSON(http.StatusNotFound,
 				apperrors.AppStdErrorHandler(
 					services.ErrInvalidProduct.Error(),
 					"ps_0000",
