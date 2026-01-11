@@ -112,7 +112,7 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 	}
 
 	getProducts += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argPosition, argPosition+1)
-	args = append(args, fmt.Sprint(limit), fmt.Sprint(offset))
+	args = append(args, limit, offset)
 
 	rows, err := pr.pool.Query(ctx, getProducts,
 		args...,
