@@ -17,5 +17,5 @@ type Product struct {
 	Price       float64               `json:"price"`
 	CreatedAt   time.Time             `json:"created_at"`
 	AddedBy     int64                 `json:"-"`
-	TenantID    int64                 `json:"tenant_id"`
+	AppID       int64                 `json:"app_id"`
 }

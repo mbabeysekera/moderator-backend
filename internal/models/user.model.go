@@ -18,4 +18,5 @@ type User struct {
 	LastLoginAt         *time.Time     `json:"last_login_at"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`
+	AppID               int64          `json:"app_id"`
 }
