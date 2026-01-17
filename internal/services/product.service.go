@@ -31,6 +31,12 @@ func (ps *ProductServiceImpl) CreateProductWithItems(c context.Context,
 	productsWithItems *dto.ProductsWithItemsRequest) error {
 
 	addedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+	userRole := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserRole
+	appID := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).AppID
+
+	if enums.UserRole(userRole) != enums.RoleAdmin && appID != productsWithItems.AppID {
+		return ErrProductItemCreateFailed
+	}
 
 	product := &models.Product{
 		Title:       productsWithItems.Title,
@@ -41,11 +47,13 @@ func (ps *ProductServiceImpl) CreateProductWithItems(c context.Context,
 		Price:       productsWithItems.Price,
 		AddedBy:     addedBy,
 		InStock:     productsWithItems.InStock,
+		AppID:       productsWithItems.AppID,
 	}
 	items := make([]models.Item, 0)
 	for _, item := range productsWithItems.Items {
 		item := &models.Item{
 			ImageURL: item.ImageURL,
+			AppID:    productsWithItems.AppID,
 		}
 		items = append(items, *item)
 	}
@@ -71,28 +79,38 @@ func (ps *ProductServiceImpl) CreateProductWithItems(c context.Context,
 }
 
 func (ps *ProductServiceImpl) GetProductsWithItems(c context.Context,
-	count string, page string, category enums.ProductCategory) ([]repositories.ProductWithItems, error) {
+	count string, page string, appID string,
+	category enums.ProductCategory) ([]repositories.ProductWithItems, error) {
 
 	limit, err := strconv.ParseInt(count, 10, 64)
 	if err != nil {
 		slog.Warn("products details fetch",
 			"service", "product",
 			"err", err,
-			"action", "fetch",
+			"action", "validate",
 		)
-		return nil, ErrProductFetch
+		return nil, ErrInvalidParams
 	}
 	pageNo, err := strconv.ParseInt(page, 10, 64)
 	if err != nil {
 		slog.Warn("products details fetch",
 			"service", "product",
 			"err", err,
-			"action", "fetch",
+			"action", "validate",
 		)
-		return nil, ErrProductFetch
+		return nil, ErrInvalidParams
 	}
 	offset := (pageNo - 1) * limit
-	productsWithItems, err := ps.productRepo.GetProductsWithItems(c, limit, offset, category)
+	appIDInt, err := strconv.ParseInt(appID, 10, 64)
+	if err != nil {
+		slog.Warn("products details fetch",
+			"service", "product",
+			"err", err,
+			"action", "validate",
+		)
+		return nil, ErrInvalidParams
+	}
+	productsWithItems, err := ps.productRepo.GetProductsWithItems(c, limit, offset, category, appIDInt)
 	if err != nil {
 		slog.Error("products details fetch",
 			"service", "product",
@@ -109,22 +127,32 @@ func (ps *ProductServiceImpl) GetProductsWithItems(c context.Context,
 }
 
 func (ps *ProductServiceImpl) GetProductWithItems(c context.Context,
-	id string) (*repositories.ProductWithItems, error) {
+	id string, appID string) (*repositories.ProductWithItems, error) {
 	productID, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
 		slog.Warn("products details fetch",
 			"service", "product",
 			"err", err,
-			"action", "fetch",
+			"action", "validate",
 		)
 		return nil, ErrInvalidParams
 	}
-	productWithItems, err := ps.productRepo.GetProductWithItemsByID(c, productID)
+	appIDInt, err := strconv.ParseInt(appID, 10, 64)
+	if err != nil {
+		slog.Warn("products details fetch",
+			"service", "product",
+			"err", err,
+			"action", "validate",
+		)
+		return nil, ErrInvalidParams
+	}
+	productWithItems, err := ps.productRepo.GetProductWithItemsByID(c, productID, appIDInt)
 	if productWithItems == nil {
 		slog.Info("product details fetch",
 			"service", "product",
 			"action", "fetch",
 			"product_id", productID,
+			"app_id", appIDInt,
 		)
 		return nil, ErrInvalidProduct
 	}
@@ -133,31 +161,62 @@ func (ps *ProductServiceImpl) GetProductWithItems(c context.Context,
 			"service", "product",
 			"err", err,
 			"action", "fetch",
+			"product_id", productID,
+			"app_id", appIDInt,
 		)
 		return nil, err
 	}
 	slog.Info("product details fetched",
 		"service", "product",
 		"action", "fetch",
+		"product_id", productID,
+		"app_id", appIDInt,
 	)
 	return productWithItems, nil
 }
 
-func (ps *ProductServiceImpl) DeleteProductByID(c context.Context, id string) error {
+func (ps *ProductServiceImpl) DeleteProductByID(c context.Context, id string, appID string) error {
 
 	productID, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
+		slog.Error("products details delete",
+			"service", "product",
+			"err", err,
+			"action", "validate",
+			"product_id", id,
+			"app_id", appID,
+		)
+		return ErrInvalidParams
+	}
+	appIDInt, err := strconv.ParseInt(appID, 10, 64)
+	if err != nil {
+		slog.Error("products details delete",
+			"service", "product",
+			"err", err,
+			"action", "validate",
+			"product_id", id,
+			"app_id", appID,
+		)
 		return ErrInvalidParams
 	}
 
 	deleteRequestedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+	userRole := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserRole
+	appIDfromToken := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).AppID
 
-	err = ps.productRepo.DeleteProductByID(c, productID, deleteRequestedBy)
+	if enums.UserRole(userRole) != enums.RoleAdmin && appIDfromToken != appIDInt {
+		return ErrProductDelete
+	}
+
+	err = ps.productRepo.DeleteProductByID(c, productID, appIDInt, deleteRequestedBy)
 	if err != nil {
 		slog.Error("products details delete",
 			"service", "product",
 			"err", err,
 			"action", "delete",
+			"product_id", id,
+			"app_id", appID,
+			"delete_requested_by", deleteRequestedBy,
 		)
 		if errors.Is(err, repositories.ErrRowsNotAffected) {
 			return ErrProductDelete
@@ -167,18 +226,33 @@ func (ps *ProductServiceImpl) DeleteProductByID(c context.Context, id string) er
 	slog.Info("products details deleted",
 		"service", "product",
 		"action", "delete",
+		"product_id", id,
+		"app_id", appID,
+		"delete_requested_by", deleteRequestedBy,
 	)
 	return nil
 }
 
 func (ps *ProductServiceImpl) GetProductWithItemsBySku(c context.Context,
-	sku string) (*repositories.ProductWithItems, error) {
-	productWithItems, err := ps.productRepo.GetProductBySku(c, sku)
+	sku string, appID string) (*repositories.ProductWithItems, error) {
+	appIDInt, err := strconv.ParseInt(appID, 10, 64)
+	if err != nil {
+		slog.Error("products details delete",
+			"service", "product",
+			"err", err,
+			"action", "validate",
+			"product_sku", sku,
+			"app_id", appID,
+		)
+		return nil, ErrInvalidParams
+	}
+	productWithItems, err := ps.productRepo.GetProductBySku(c, sku, appIDInt)
 	if productWithItems == nil {
 		slog.Info("product details fetch",
 			"service", "product",
 			"action", "fetch",
 			"product_sku", sku,
+			"app_id", appID,
 		)
 		return nil, ErrInvalidProduct
 	}
@@ -187,28 +261,52 @@ func (ps *ProductServiceImpl) GetProductWithItemsBySku(c context.Context,
 			"service", "product",
 			"err", err,
 			"action", "fetch",
+			"product_sku", sku,
+			"app_id", appID,
 		)
 		return nil, err
 	}
 	slog.Info("product details fetched",
 		"service", "product",
 		"action", "fetch",
+		"product_sku", sku,
+		"app_id", appID,
 	)
 	return productWithItems, nil
 }
 
 func (ps *ProductServiceImpl) UpdateProductStock(c context.Context,
-	stock int, productID int64) error {
+	stock int, productID int64, appID string) error {
 
 	updatedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+	userRole := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserRole
+	appIDfromToken := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).AppID
 
-	err := ps.productRepo.UpdateProductStockByID(c, stock, productID)
+	appIDInt, err := strconv.ParseInt(appID, 10, 64)
+	if err != nil {
+		slog.Error("products details update",
+			"service", "product",
+			"err", err,
+			"action", "validate",
+			"product_id", productID,
+			"app_id", appID,
+		)
+		return ErrInvalidParams
+	}
+
+	if enums.UserRole(userRole) != enums.RoleAdmin && appIDfromToken != appIDInt {
+		return ErrProductItemCreateFailed
+	}
+
+	err = ps.productRepo.UpdateProductStockByID(c, stock, productID, appIDInt)
 	if err != nil {
 		slog.Error("products details update",
 			"service", "product",
 			"err", err,
 			"action", "update",
 			"added_by", updatedBy,
+			"product_id", productID,
+			"app_id", appID,
 		)
 		if errors.Is(err, repositories.ErrRowsNotAffected) {
 			return ErrProductItemUpdateFailed
@@ -219,22 +317,43 @@ func (ps *ProductServiceImpl) UpdateProductStock(c context.Context,
 		"service", "product",
 		"action", "update",
 		"added_by", updatedBy,
+		"product_id", productID,
+		"app_id", appID,
 	)
 	return nil
 }
 
 func (ps *ProductServiceImpl) UpdateProductPrice(c context.Context,
-	price float64, productID int64) error {
-
+	price float64, productID int64, appID string) error {
 	updatedBy := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+	userRole := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserRole
+	appIDfromToken := c.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).AppID
 
-	err := ps.productRepo.UpdateProductPriceByID(c, price, productID)
+	appIDInt, err := strconv.ParseInt(appID, 10, 64)
+	if err != nil {
+		slog.Error("products details update",
+			"service", "product",
+			"err", err,
+			"action", "validate",
+			"product_id", productID,
+			"app_id", appID,
+		)
+		return ErrInvalidParams
+	}
+
+	if enums.UserRole(userRole) != enums.RoleAdmin && appIDfromToken != appIDInt {
+		return ErrProductItemCreateFailed
+	}
+
+	err = ps.productRepo.UpdateProductPriceByID(c, price, productID, appIDInt)
 	if err != nil {
 		slog.Error("products details update",
 			"service", "product",
 			"err", err,
 			"action", "update",
 			"added_by", updatedBy,
+			"product_id", productID,
+			"app_id", appID,
 		)
 		if errors.Is(err, repositories.ErrRowsNotAffected) {
 			return ErrProductItemUpdateFailed
@@ -245,6 +364,8 @@ func (ps *ProductServiceImpl) UpdateProductPrice(c context.Context,
 		"service", "product",
 		"action", "update",
 		"added_by", updatedBy,
+		"product_id", productID,
+		"app_id", appID,
 	)
 	return nil
 }

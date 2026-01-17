@@ -52,6 +52,7 @@ func main() {
 	jwtUtil := utils.NewJWTUtil(jwtSecret)
 	authorizationHandler := middlewares.AuthorizationHandler
 	rbacHandler := middlewares.CheckRBAC
+	appIDHandler := middlewares.AppIDExtractHandler
 
 	userRepo := repositories.NewUserRepository(pool)
 	productItemsRepo := repositories.NewProductRepository(pool)
@@ -68,6 +69,7 @@ func main() {
 
 	//Routes does not require Authorization
 	routerGroup := engine.Group(basePath)
+	routerGroup.Use(appIDHandler())
 	routes.RegisterHealthCheckRoutes(routerGroup)
 	routes.RegisterSignUpRoutes(routerGroup, signUpController)
 	routes.RegisterLoginRoutes(routerGroup, loginController)

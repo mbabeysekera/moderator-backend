@@ -39,6 +39,7 @@ type ItemCreateRequest struct {
 }
 
 type ProductsWithItemsRequest struct {
+	AppID       int64                 `json:"app_id" binding:"required"`
 	Title       string                `json:"title" binding:"required,max=24"`
 	Brand       string                `json:"brand" binding:"required,max=24"`
 	Category    enums.ProductCategory `json:"category" binding:"required"`
@@ -51,6 +52,7 @@ type ProductsWithItemsRequest struct {
 
 type ProductDetailsUpdateRequest struct {
 	ID      int64    `json:"id" binding:"required"`
+	AppID   int64    `json:"app_id" binding:"required"`
 	Price   *float64 `json:"price,omitempty"`
 	InStock *int     `json:"in_stock,omitempty"`
 }
