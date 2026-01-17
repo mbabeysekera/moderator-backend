@@ -36,14 +36,15 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 			"err", err,
 			"query", "",
 			"added_by", product.AddedBy,
+			"app_id", product.AppID,
 		)
 		return err
 	}
 	defer tx.Rollback(ctx)
 
 	const addProduct = `INSERT INTO  
-		products(title, brand, category, sku, description, price, added_by, in_stock)
-		VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+		products(title, brand, category, sku, description, price, added_by, in_stock, app_id)
+		VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
 	`
 	err = tx.QueryRow(ctx, addProduct,
@@ -55,6 +56,7 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 		product.Price,
 		product.AddedBy,
 		product.InStock,
+		product.AppID,
 	).Scan(&product.ID)
 	if err != nil {
 		slog.Error("db insert",
@@ -62,17 +64,19 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 			"err", err,
 			"query", addProduct,
 			"added_by", product.AddedBy,
+			"app_id", product.AppID,
 		)
 		return err
 	}
 	const addItems = `INSERT INTO
-		items(product_id, image_url)
-		VALUES($1, $2)
+		items(product_id, image_url, app_id)
+		VALUES($1, $2, $3)
 	`
 	for _, item := range items {
 		tag, err := tx.Exec(ctx, addItems,
 			product.ID,
 			item.ImageURL,
+			product.AppID,
 		)
 		if err != nil {
 			slog.Error("db insert",
@@ -80,6 +84,7 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 				"err", err,
 				"query", addItems,
 				"product_id", product.ID,
+				"app_id", product.AppID,
 			)
 			return err
 		}
@@ -89,6 +94,7 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 				"err", ErrRowsNotAffected,
 				"query", addItems,
 				"product_id", product.ID,
+				"app_id", product.AppID,
 			)
 			return ErrRowsNotAffected
 		}
@@ -97,16 +103,16 @@ func (pr *ProductRepository) CreateProductWithItems(ctx context.Context,
 }
 
 func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
-	limit int64, offset int64, category enums.ProductCategory) ([]ProductWithItems, error) {
+	limit int64, offset int64, category enums.ProductCategory, appID int64) ([]ProductWithItems, error) {
 
-	getProducts := `SELECT id, title, brand, category, sku, description, price, created_at, in_stock
-			FROM products
+	getProducts := `SELECT id, title, brand, category, sku, description, price, created_at, in_stock, app_id
+			FROM products WHERE app_id = $1
 		`
-	args := make([]any, 0)
-	argPosition := 1
+	args := []any{appID}
+	argPosition := 2
 
 	if category != enums.ProductCategory("ALL") {
-		getProducts += fmt.Sprintf(" WHERE category = $%d", argPosition)
+		getProducts += fmt.Sprintf(" AND category = $%d", argPosition)
 		args = append(args, string(category))
 		argPosition++
 	}
@@ -142,6 +148,7 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 			&productWithItems.Product.Price,
 			&productWithItems.Product.CreatedAt,
 			&productWithItems.Product.InStock,
+			&productWithItems.Product.AppID,
 		)
 		if err != nil {
 			slog.Error("db rows",
@@ -167,15 +174,17 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 		return productsWithItems, nil
 	}
 
-	const getItemsForProduct = `SELECT id, product_id, image_url, created_at
-		FROM items WHERE product_id = ANY($1)
+	const getItemsForProduct = `SELECT id, product_id, image_url, created_at, app_id
+		FROM items WHERE product_id = ANY($1) AND app_id = $2
 	`
-	itemRows, err := pr.pool.Query(ctx, getItemsForProduct, productIDs)
+	itemRows, err := pr.pool.Query(ctx, getItemsForProduct, productIDs, appID)
 	if err != nil {
 		slog.Error("db fetch",
 			"repository", "items",
 			"err", err,
 			"query", getItemsForProduct,
+			"product_ids", productIDs,
+			"app_id", appID,
 		)
 		return nil, ErrDBQuery
 	}
@@ -188,6 +197,7 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 			&item.ProductID,
 			&item.ImageURL,
 			&item.CreatedAt,
+			&item.AppID,
 		)
 		if err != nil {
 			slog.Error("db rows",
@@ -215,12 +225,12 @@ func (pr *ProductRepository) GetProductsWithItems(ctx context.Context,
 }
 
 func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
-	productID int64) (*ProductWithItems, error) {
+	productID int64, appID int64) (*ProductWithItems, error) {
 	const getProductByID = ` SELECT id, title, brand, category, sku, description, price, created_at,
-			in_stock 
-			FROM products WHERE id = $1
+			in_stock, app_id 
+			FROM products WHERE id = $1 AND app_id = $2
 		`
-	productRow := pr.pool.QueryRow(ctx, getProductByID, productID)
+	productRow := pr.pool.QueryRow(ctx, getProductByID, productID, appID)
 	var productWithItems ProductWithItems
 	err := productRow.Scan(
 		&productWithItems.Product.ID,
@@ -232,6 +242,7 @@ func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 		&productWithItems.Product.Price,
 		&productWithItems.Product.CreatedAt,
 		&productWithItems.Product.InStock,
+		&productWithItems.Product.AppID,
 	)
 	if err != nil {
 		slog.Error("db rows",
@@ -244,10 +255,10 @@ func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 		return nil, ErrDBQuery
 	}
 	productWithItems.Items = make([]models.Item, 0)
-	const getItemsForProduct = `SELECT id, product_id, image_url, created_at
-		FROM items WHERE product_id = $1
+	const getItemsForProduct = `SELECT id, product_id, image_url, created_at, app_id
+		FROM items WHERE product_id = $1 AND app_id = $2
 	`
-	itemsRows, err := pr.pool.Query(ctx, getItemsForProduct, productID)
+	itemsRows, err := pr.pool.Query(ctx, getItemsForProduct, productID, appID)
 	if err != nil {
 		slog.Error("db fetch",
 			"repository", "items",
@@ -264,6 +275,7 @@ func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 			&item.ProductID,
 			&item.ImageURL,
 			&item.CreatedAt,
+			&item.AppID,
 		)
 		productWithItems.Items = append(productWithItems.Items, item)
 	}
@@ -279,17 +291,19 @@ func (pr *ProductRepository) GetProductWithItemsByID(ctx context.Context,
 }
 
 func (pr *ProductRepository) DeleteProductByID(ctx context.Context,
-	productID int64, deleteRequestedBy int64) error {
+	productID int64, appID int64, deleteRequestedBy int64) error {
 
-	const deleteProduct = `DELETE FROM products WHERE id = $1 AND added_by = $2`
+	const deleteProduct = `DELETE FROM products WHERE id = $1 AND added_by = $2 AND app_id = $3`
 
-	tag, err := pr.pool.Exec(ctx, deleteProduct, productID, deleteRequestedBy)
+	tag, err := pr.pool.Exec(ctx, deleteProduct, productID, deleteRequestedBy, appID)
 	if err != nil {
 		slog.Error("db delete",
 			"repository", "products,items",
 			"err", err,
 			"query", deleteProduct,
 			"product_id", productID,
+			"app_id", appID,
+			"delete_requested_by", deleteRequestedBy,
 		)
 		return ErrDBQuery
 	}
@@ -299,6 +313,8 @@ func (pr *ProductRepository) DeleteProductByID(ctx context.Context,
 			"err", ErrRowsNotAffected,
 			"query", deleteProduct,
 			"product_id", productID,
+			"app_id", appID,
+			"delete_requested_by", deleteRequestedBy,
 		)
 		return ErrRowsNotAffected
 	}
@@ -306,13 +322,13 @@ func (pr *ProductRepository) DeleteProductByID(ctx context.Context,
 }
 
 func (pr *ProductRepository) GetProductBySku(ctx context.Context,
-	sku string) (*ProductWithItems, error) {
+	sku string, appID int64) (*ProductWithItems, error) {
 
 	const getProductBySku = `SELECT id, title, brand, category, sku, description, price, created_at,
-			in_stock
-			FROM products WHERE sku = $1
+			in_stock, app_id
+			FROM products WHERE sku = $1 AND app_id = $2
 		`
-	productRow := pr.pool.QueryRow(ctx, getProductBySku, sku)
+	productRow := pr.pool.QueryRow(ctx, getProductBySku, sku, appID)
 	var productWithItems ProductWithItems
 	err := productRow.Scan(
 		&productWithItems.Product.ID,
@@ -324,6 +340,7 @@ func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 		&productWithItems.Product.Price,
 		&productWithItems.Product.CreatedAt,
 		&productWithItems.Product.InStock,
+		&productWithItems.Product.AppID,
 	)
 	if err != nil {
 		slog.Error("db rows",
@@ -336,10 +353,10 @@ func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 		return nil, ErrDBQuery
 	}
 	productWithItems.Items = make([]models.Item, 0)
-	const getItemsForProduct = `SELECT id, product_id, image_url, created_at
-		FROM items WHERE product_id = $1
+	const getItemsForProduct = `SELECT id, product_id, image_url, created_at, app_id
+		FROM items WHERE product_id = $1 AND app_id = $2
 	`
-	itemsRows, err := pr.pool.Query(ctx, getItemsForProduct, productWithItems.Product.ID)
+	itemsRows, err := pr.pool.Query(ctx, getItemsForProduct, productWithItems.Product.ID, appID)
 	if err != nil {
 		slog.Error("db fetch",
 			"repository", "items",
@@ -356,6 +373,7 @@ func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 			&item.ProductID,
 			&item.ImageURL,
 			&item.CreatedAt,
+			&item.AppID,
 		)
 		productWithItems.Items = append(productWithItems.Items, item)
 	}
@@ -371,15 +389,15 @@ func (pr *ProductRepository) GetProductBySku(ctx context.Context,
 }
 
 func (pr *ProductRepository) GetTotalProductsCount(ctx context.Context,
-	category enums.ProductCategory) (int64, error) {
+	category enums.ProductCategory, appID int64) (int64, error) {
 
-	countProducts := `SELECT count(*) FROM products`
+	countProducts := `SELECT count(*) FROM products WHERE app_id = $1`
 
-	args := []any{}
-	argPos := 1
+	args := []any{appID}
+	argPos := 2
 
 	if category != enums.ProductCategory("ALL") {
-		countProducts += fmt.Sprintf(" WHERE category = $%d", argPos)
+		countProducts += fmt.Sprintf(" AND category = $%d", argPos)
 		args = append(args, category)
 	}
 
@@ -399,9 +417,9 @@ func (pr *ProductRepository) GetTotalProductsCount(ctx context.Context,
 }
 
 func (pr *ProductRepository) UpdateProductStockByID(ctx context.Context,
-	stock int, productID int64) error {
-	const updateProduct = `UPDATE products SET in_stock = $1 WHERE id = $2`
-	tag, err := pr.pool.Exec(ctx, updateProduct, stock, productID)
+	stock int, productID int64, appID int64) error {
+	const updateProduct = `UPDATE products SET in_stock = $1 WHERE id = $2 AND app_id = $3`
+	tag, err := pr.pool.Exec(ctx, updateProduct, stock, productID, appID)
 	if err != nil {
 		slog.Error("db update",
 			"repository", "product",
@@ -424,9 +442,9 @@ func (pr *ProductRepository) UpdateProductStockByID(ctx context.Context,
 }
 
 func (pr *ProductRepository) UpdateProductPriceByID(ctx context.Context,
-	price float64, productID int64) error {
-	const updateProduct = `UPDATE products SET price = $1 WHERE id = $2`
-	tag, err := pr.pool.Exec(ctx, updateProduct, price, productID)
+	price float64, productID int64, appID int64) error {
+	const updateProduct = `UPDATE products SET price = $1 WHERE id = $2 AND app_id = $3`
+	tag, err := pr.pool.Exec(ctx, updateProduct, price, productID, appID)
 	if err != nil {
 		slog.Error("db update",
 			"repository", "product",

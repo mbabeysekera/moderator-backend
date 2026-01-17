@@ -7,4 +7,5 @@ type Item struct {
 	ProductID int64     `json:"product_id"`
 	ImageURL  string    `json:"image_url"`
 	CreatedAt time.Time `json:"created_at"`
+	AppID     int64     `json:"app_id"`
 }

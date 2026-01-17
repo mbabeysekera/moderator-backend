@@ -13,6 +13,7 @@ import (
 type JWTExtractedDetails struct {
 	UserID   int64
 	UserRole string
+	AppID    int64
 }
 type JWTUtil struct {
 	secret []byte
@@ -24,12 +25,14 @@ func NewJWTUtil(jwtSecret string) *JWTUtil {
 	}
 }
 
-func (ju *JWTUtil) GenerateJWTToken(userID int64, role enums.UserRole) (string, error) {
+func (ju *JWTUtil) GenerateJWTToken(userID int64,
+	appID int64, role enums.UserRole) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"iss":  "coolbreez-moderator",
-		"exp":  time.Now().Add(time.Hour * 2).Unix(),
-		"sub":  fmt.Sprintf("%d", userID),
-		"role": role,
+		"iss":    "coolbreez-moderator",
+		"exp":    time.Now().Add(time.Hour * 2).Unix(),
+		"sub":    fmt.Sprintf("%d", userID),
+		"app_id": fmt.Sprintf("%d", appID),
+		"role":   role,
 	})
 	return token.SignedString(ju.secret)
 }
@@ -54,14 +57,20 @@ func (ju *JWTUtil) VerifyJWTToken(token string) (*JWTExtractedDetails, error) {
 	if !ok {
 		return nil, errors.New("claim type mismatch")
 	}
-	sub := claims["sub"].(string)
-	id, err := strconv.ParseInt(sub, 10, 64)
+
+	id, err := strconv.ParseInt(claims["sub"].(string), 10, 64)
 	if err != nil {
 		return nil, errors.New("id convertion failed")
 	}
 
+	appID, err := strconv.ParseInt(claims["app_id"].(string), 10, 64)
+	if err != nil {
+		return nil, errors.New("app_id convertion failed")
+	}
+
 	return &JWTExtractedDetails{
 		UserID:   id,
+		AppID:    appID,
 		UserRole: claims["role"].(string),
 	}, nil
 }

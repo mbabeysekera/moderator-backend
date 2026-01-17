@@ -31,6 +31,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 			"err", err,
 			"action", "generate",
 			"mobile_no", newUser.MobileNo,
+			"app_id", newUser.AppID,
 		)
 		return ErrUserDetailsUpdate
 	}
@@ -41,6 +42,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 		FullName:     newUser.FullName,
 		Role:         enums.RoleUser,
 		IsActive:     true,
+		AppID:        newUser.AppID,
 	}
 	err = ss.userRepo.Create(rc, userToCreate)
 	if err != nil {
@@ -49,6 +51,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 			"err", err,
 			"action", "create",
 			"mobile_no", newUser.MobileNo,
+			"app_id", newUser.AppID,
 		)
 		if errors.Is(err, repositories.ErrRowsNotAffected) {
 			return ErrUserDetailsUpdate
@@ -59,6 +62,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 		"service", "signup",
 		"action", "create",
 		"mobile_no", newUser.MobileNo,
+		"app_id", newUser.AppID,
 	)
 	return nil
 }
