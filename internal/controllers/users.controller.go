@@ -16,7 +16,7 @@ import (
 
 type UserService interface {
 	UserUpdateDetails(rc context.Context, userNewDetails *dto.UserUpdateDetails) error
-	GetUserByID(rc context.Context) (*dto.UserSessionIntrospection, error)
+	GetUserByAccessToken(rc context.Context) (*dto.UserSessionIntrospection, error)
 }
 
 type UserController struct {
@@ -78,7 +78,7 @@ func (uc *UserController) UserDetailsUpdate(c *gin.Context) {
 }
 
 func (uc *UserController) UserSessionIntrospection(c *gin.Context) {
-	userSessionIntros, err := uc.service.GetUserByID(c.Request.Context())
+	userSessionIntros, err := uc.service.GetUserByAccessToken(c.Request.Context())
 	if err != nil {
 		slog.Error("user details update",
 			"err", err,
@@ -107,6 +107,7 @@ func (uc *UserController) UserSessionIntrospection(c *gin.Context) {
 	c.JSON(http.StatusOK, &dto.SessionIntrospection{
 		Status:   enums.RequestSuccess,
 		UserID:   userSessionIntros.UserID,
+		AppID:    userSessionIntros.AppID,
 		FullName: userSessionIntros.FullName,
 		Role:     userSessionIntros.Role,
 		Time:     time.Now().UTC(),

@@ -25,7 +25,7 @@ func NewLoginService(repo *repositories.UserRepository, jwtSvc *utils.JWTUtil) *
 
 func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 	loginUser *dto.UserLoginRequest) (*dto.UserLoginRequiredFields, error) {
-	user, err := ul.userRepo.GetUserByMobileNo(rc, loginUser.MobileNo)
+	user, err := ul.userRepo.GetUserByMobileNo(rc, loginUser.MobileNo, loginUser.AppID)
 	if err != nil {
 		slog.Error("user retrieval error",
 			"service", "login",

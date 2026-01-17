@@ -62,7 +62,7 @@ func (userRepo *UserRepository) Create(ctx context.Context, user *models.User) e
 }
 
 func (userRepo *UserRepository) GetUserByMobileNo(ctx context.Context,
-	mobileNo string) (*models.User, error) {
+	mobileNo string, appID int64) (*models.User, error) {
 	const getUser = `SELECT 
 		id,
 		email, 
@@ -76,9 +76,9 @@ func (userRepo *UserRepository) GetUserByMobileNo(ctx context.Context,
 		created_at,
 		updated_at,
 		app_id
-	FROM users WHERE mobile_no = $1
+	FROM users WHERE mobile_no = $1 AND app_id = $2
 	`
-	userRow := userRepo.pool.QueryRow(ctx, getUser, mobileNo)
+	userRow := userRepo.pool.QueryRow(ctx, getUser, mobileNo, appID)
 	var user models.User
 	err := userRow.Scan(
 		&user.ID,
@@ -103,6 +103,56 @@ func (userRepo *UserRepository) GetUserByMobileNo(ctx context.Context,
 			"err", err,
 			"query", getUser,
 			"mobile_no", mobileNo,
+			"app_id", appID,
+		)
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (userRepo *UserRepository) GetUserByEmail(ctx context.Context,
+	email string, appID int64) (*models.User, error) {
+	const getUser = `SELECT 
+		id,
+		email, 
+		mobile_no,
+		password_hash,
+		full_name,
+		role,
+		is_active,
+		failed_login_attempts,
+		last_login_at,
+		created_at,
+		updated_at,
+		app_id
+	FROM users WHERE email = $1 AND app_id = $2
+	`
+	userRow := userRepo.pool.QueryRow(ctx, getUser, email, appID)
+	var user models.User
+	err := userRow.Scan(
+		&user.ID,
+		&user.Email,
+		&user.MobileNo,
+		&user.PasswordHash,
+		&user.FullName,
+		&user.Role,
+		&user.IsActive,
+		&user.FailedLoginAttempts,
+		&user.LastLoginAt,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.AppID,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		slog.Error("db select user by email",
+			"repository", "user",
+			"err", err,
+			"query", getUser,
+			"email", email,
+			"app_id", appID,
 		)
 		return nil, err
 	}
@@ -203,11 +253,13 @@ func (userRepo *UserRepository) UpdateUserByID(ctx context.Context, user *models
 
 func (userRepo *UserRepository) GetUserByID(ctx context.Context,
 	userID int64) (*models.User, error) {
-	const getUserByID = `SELECT id, full_name, role, app_id FROM users WHERE id = $1`
+	const getUserByID = `SELECT id, mobile_no, email, full_name, role, app_id FROM users WHERE id = $1`
 	userRow := userRepo.pool.QueryRow(ctx, getUserByID, userID)
 	var user models.User
 	err := userRow.Scan(
 		&user.ID,
+		&user.MobileNo,
+		&user.Email,
 		&user.FullName,
 		&user.Role,
 		&user.AppID,
