@@ -28,6 +28,7 @@ func (us *UserServiceImpl) UserUpdateDetails(rc context.Context,
 	userNewDetails *dto.UserUpdateDetails) error {
 	user := &models.User{
 		ID:       userNewDetails.ID,
+		AppID:    userNewDetails.AppID,
 		MobileNo: userNewDetails.MobileNo,
 		Email:    userNewDetails.Email,
 		FullName: userNewDetails.FullName,
@@ -39,6 +40,7 @@ func (us *UserServiceImpl) UserUpdateDetails(rc context.Context,
 			"err", err,
 			"action", "update",
 			"mobile_no", userNewDetails.MobileNo,
+			"app_id", userNewDetails.AppID,
 		)
 		if errors.Is(err, repositories.ErrRowsNotAffected) {
 			return ErrUserDetailsUpdate
@@ -49,6 +51,7 @@ func (us *UserServiceImpl) UserUpdateDetails(rc context.Context,
 		"service", "user",
 		"action", "update",
 		"mobile_no", userNewDetails.MobileNo,
+		"app_id", userNewDetails.AppID,
 	)
 	return nil
 }
@@ -67,10 +70,12 @@ func (us *UserServiceImpl) GetUserByID(rc context.Context) (*dto.UserSessionIntr
 		"service", "user",
 		"action", "fetch",
 		"user_id", user.ID,
+		"app_id", user.AppID,
 	)
 	return &dto.UserSessionIntrospection{
 		UserID:   user.ID,
 		FullName: user.FullName,
 		Role:     user.Role,
+		AppID:    user.AppID,
 	}, nil
 }

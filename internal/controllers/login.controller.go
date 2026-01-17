@@ -92,6 +92,7 @@ func (lc *LoginController) Login(c *gin.Context) {
 		UserID:      loginRequiredFields.UserID,
 		FullName:    loginRequiredFields.FullName,
 		Role:        loginRequiredFields.Role,
+		AppID:       loginRequiredFields.AppID,
 		Time:        time.Now().UTC(),
 	})
 }

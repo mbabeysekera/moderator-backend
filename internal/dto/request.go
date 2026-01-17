@@ -17,15 +17,18 @@ type UserCreateRequest struct {
 	Email    string `json:"email,omitempty"`
 	Password string `json:"password" binding:"required,min=8"`
 	FullName string `json:"full_name" binding:"max=128"`
+	AppID    int64  `json:"app_id" binding:"required"`
 }
 
 type UserLoginRequest struct {
 	MobileNo string `json:"mobile_no" binding:"required,min=10,max=15,numeric"`
 	Password string `json:"password" binding:"required,min=8"`
+	AppID    int64  `json:"app_id" binding:"required"`
 }
 
 type UserUpdateDetails struct {
 	ID       int64  `json:"id" binding:"required"`
+	AppID    int64  `json:"app_id" binding:"required"`
 	MobileNo string `json:"mobile_no" binding:"required,min=10,max=15,numeric"`
 	Email    string `json:"email,omitempty"`
 	FullName string `json:"full_name" binding:"max=128"`

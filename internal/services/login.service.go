@@ -32,6 +32,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"err", err,
 			"action", "login",
 			"mobile_no", loginUser.MobileNo,
+			"app_id", loginUser.AppID,
 		)
 		return nil, err
 	}
@@ -40,6 +41,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"service", "login",
 			"action", "login",
 			"mobile_no", loginUser.MobileNo,
+			"app_id", loginUser.AppID,
 		)
 		return nil, ErrInvalidUser
 	}
@@ -53,6 +55,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"err", err,
 			"action", "validation",
 			"mobile_no", loginUser.MobileNo,
+			"app_id", loginUser.AppID,
 		)
 		nErr := ul.userRepo.IncrementUserLoginFailuresByID(rc, user.ID)
 		if nErr != nil {
@@ -64,8 +67,15 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 		return nil, ErrInvalidUser
 	}
 
-	accessToke, err := ul.jwtService.GenerateJWTToken(user.ID, user.Role)
+	accessToken, err := ul.jwtService.GenerateJWTToken(user.ID, user.AppID, user.Role)
 	if err != nil {
+		slog.Error("user authentication error",
+			"service", "login",
+			"err", err,
+			"action", "authentication",
+			"mobile_no", loginUser.MobileNo,
+			"app_id", loginUser.AppID,
+		)
 		return nil, err
 	}
 
@@ -81,11 +91,13 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 		"service", "login",
 		"action", "login",
 		"mobile_no", loginUser.MobileNo,
+		"app_id", loginUser.AppID,
 	)
 	return &dto.UserLoginRequiredFields{
 		UserID:      user.ID,
 		FullName:    user.FullName,
 		Role:        user.Role,
-		AccessToken: accessToke,
+		AppID:       user.AppID,
+		AccessToken: accessToken,
 	}, nil
 }

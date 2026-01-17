@@ -26,15 +26,17 @@ func (userRepo *UserRepository) Create(ctx context.Context, user *models.User) e
 		mobile_no,
 		password_hash,
 		full_name,
-		role
+		role,
+		app_id
 	) 
-	VALUES($1, $2, $3, $4, $5)`
+	VALUES($1, $2, $3, $4, $5, $6)`
 	tag, err := userRepo.pool.Exec(ctx, userCreate,
 		user.Email,
 		user.MobileNo,
 		user.PasswordHash,
 		user.FullName,
 		user.Role,
+		user.AppID,
 	)
 	if err != nil {
 		slog.Error("db insert",
@@ -42,6 +44,7 @@ func (userRepo *UserRepository) Create(ctx context.Context, user *models.User) e
 			"err", err,
 			"query", userCreate,
 			"mobile_no", user.MobileNo,
+			"app_id", user.AppID,
 		)
 		return err
 	}
@@ -51,6 +54,7 @@ func (userRepo *UserRepository) Create(ctx context.Context, user *models.User) e
 			"err", ErrRowsNotAffected,
 			"query", userCreate,
 			"user_id", nil,
+			"app_id", user.AppID,
 		)
 		return ErrRowsNotAffected
 	}
@@ -70,7 +74,8 @@ func (userRepo *UserRepository) GetUserByMobileNo(ctx context.Context,
 		failed_login_attempts,
 		last_login_at,
 		created_at,
-		updated_at
+		updated_at,
+		app_id
 	FROM users WHERE mobile_no = $1
 	`
 	userRow := userRepo.pool.QueryRow(ctx, getUser, mobileNo)
@@ -87,6 +92,7 @@ func (userRepo *UserRepository) GetUserByMobileNo(ctx context.Context,
 		&user.LastLoginAt,
 		&user.CreatedAt,
 		&user.UpdatedAt,
+		&user.AppID,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -109,7 +115,7 @@ func (userRepo *UserRepository) IncrementUserLoginFailuresByID(ctx context.Conte
 	users SET
 		failed_login_attempts = failed_login_attempts + 1,
 		updated_at = NOW()
-	WHERE id = $1	
+	WHERE id = $1	 
 	`
 	tag, err := userRepo.pool.Exec(ctx, updateFailedLogin, userID)
 	if err != nil {
@@ -197,13 +203,14 @@ func (userRepo *UserRepository) UpdateUserByID(ctx context.Context, user *models
 
 func (userRepo *UserRepository) GetUserByID(ctx context.Context,
 	userID int64) (*models.User, error) {
-	const getUserByID = `SELECT id, full_name, role FROM users WHERE id = $1`
+	const getUserByID = `SELECT id, full_name, role, app_id FROM users WHERE id = $1`
 	userRow := userRepo.pool.QueryRow(ctx, getUserByID, userID)
 	var user models.User
 	err := userRow.Scan(
 		&user.ID,
 		&user.FullName,
 		&user.Role,
+		&user.AppID,
 	)
 	if err != nil {
 		slog.Error("db update user details",
