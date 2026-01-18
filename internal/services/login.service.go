@@ -24,15 +24,15 @@ func NewLoginService(repo *repositories.UserRepository, jwtSvc *utils.JWTUtil) *
 }
 
 func (ul *LoginServiceImpl) UserLogin(rc context.Context,
-	loginUser *dto.UserLoginRequest) (*dto.UserLoginRequiredFields, error) {
-	user, err := ul.userRepo.GetUserByMobileNo(rc, loginUser.MobileNo, loginUser.AppID)
+	loginUser *dto.UserLoginRequest, appID int64) (*dto.UserLoginRequiredFields, error) {
+	user, err := ul.userRepo.GetUserByMobileNo(rc, loginUser.MobileNo, appID)
 	if err != nil {
 		slog.Error("user retrieval error",
 			"service", "login",
 			"err", err,
 			"action", "login",
 			"mobile_no", loginUser.MobileNo,
-			"app_id", loginUser.AppID,
+			"app_id", appID,
 		)
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"service", "login",
 			"action", "login",
 			"mobile_no", loginUser.MobileNo,
-			"app_id", loginUser.AppID,
+			"app_id", appID,
 		)
 		return nil, ErrInvalidUser
 	}
@@ -55,7 +55,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"err", err,
 			"action", "validation",
 			"mobile_no", loginUser.MobileNo,
-			"app_id", loginUser.AppID,
+			"app_id", appID,
 		)
 		nErr := ul.userRepo.IncrementUserLoginFailuresByID(rc, user.ID)
 		if nErr != nil {
@@ -74,7 +74,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 			"err", err,
 			"action", "authentication",
 			"mobile_no", loginUser.MobileNo,
-			"app_id", loginUser.AppID,
+			"app_id", appID,
 		)
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (ul *LoginServiceImpl) UserLogin(rc context.Context,
 		"service", "login",
 		"action", "login",
 		"mobile_no", loginUser.MobileNo,
-		"app_id", loginUser.AppID,
+		"app_id", appID,
 	)
 	return &dto.UserLoginRequiredFields{
 		UserID:      user.ID,

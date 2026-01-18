@@ -15,8 +15,10 @@ import (
 )
 
 type UserService interface {
-	UserUpdateDetails(rc context.Context, userNewDetails *dto.UserUpdateDetails) error
-	GetUserByAccessToken(rc context.Context) (*dto.UserSessionIntrospection, error)
+	UserUpdateDetails(rc context.Context,
+		userNewDetails *dto.UserUpdateDetails, appID int64) error
+	GetUserByAccessToken(rc context.Context, appID int64) (*dto.UserSessionIntrospection,
+		error)
 }
 
 type UserController struct {
@@ -32,6 +34,7 @@ func NewUserController(userService UserService) *UserController {
 func (uc *UserController) UserDetailsUpdate(c *gin.Context) {
 	var userNewDetails dto.UserUpdateDetails
 	err := c.ShouldBindJSON(&userNewDetails)
+	appID := c.GetInt64("app_id")
 	if err != nil {
 		slog.Error("user update details",
 			"err", err,
@@ -45,13 +48,14 @@ func (uc *UserController) UserDetailsUpdate(c *gin.Context) {
 		))
 		return
 	}
-	err = uc.service.UserUpdateDetails(c.Request.Context(), &userNewDetails)
+	err = uc.service.UserUpdateDetails(c.Request.Context(), &userNewDetails, appID)
 	if err != nil {
 		slog.Error("user details update",
 			"err", err,
 			"method", c.Request.Method,
 			"path", c.Request.URL.Path,
 			"mobile_no", userNewDetails.MobileNo,
+			"app_id", appID,
 			"ip", c.ClientIP(),
 		)
 		if errors.Is(err, services.ErrUserDetailsUpdate) {
@@ -78,13 +82,15 @@ func (uc *UserController) UserDetailsUpdate(c *gin.Context) {
 }
 
 func (uc *UserController) UserSessionIntrospection(c *gin.Context) {
-	userSessionIntros, err := uc.service.GetUserByAccessToken(c.Request.Context())
+	appID := c.GetInt64("app_id")
+	userSessionIntros, err := uc.service.GetUserByAccessToken(c.Request.Context(), appID)
 	if err != nil {
 		slog.Error("user details update",
 			"err", err,
 			"method", c.Request.Method,
 			"path", c.Request.URL.Path,
 			"user_id", "",
+			"app_id", appID,
 			"ip", c.ClientIP(),
 		)
 		if errors.Is(err, services.ErrInvalidUser) {

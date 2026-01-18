@@ -17,7 +17,7 @@ import (
 
 type LoginService interface {
 	UserLogin(rc context.Context,
-		loginUser *dto.UserLoginRequest) (*dto.UserLoginRequiredFields, error)
+		loginUser *dto.UserLoginRequest, appID int64) (*dto.UserLoginRequiredFields, error)
 }
 
 type LoginController struct {
@@ -32,6 +32,7 @@ func NewLoginController(loginService LoginService) *LoginController {
 
 func (lc *LoginController) Login(c *gin.Context) {
 	var loginUser dto.UserLoginRequest
+	appID := c.GetInt64("app_id")
 	err := c.ShouldBindJSON(&loginUser)
 	if err != nil {
 		slog.Error("user login parameter validation",
@@ -39,6 +40,7 @@ func (lc *LoginController) Login(c *gin.Context) {
 			"method", c.Request.Method,
 			"path", c.Request.URL.Path,
 			"ip", c.ClientIP(),
+			"app_id", appID,
 		)
 		c.JSON(http.StatusBadRequest,
 			apperrors.AppStdErrorHandler(
@@ -48,7 +50,7 @@ func (lc *LoginController) Login(c *gin.Context) {
 		)
 		return
 	}
-	loginRequiredFields, err := lc.service.UserLogin(c.Request.Context(), &loginUser)
+	loginRequiredFields, err := lc.service.UserLogin(c.Request.Context(), &loginUser, appID)
 	if err != nil {
 		slog.Error("user login unsuccessful",
 			"err", err,

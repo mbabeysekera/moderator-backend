@@ -26,19 +26,21 @@ func NewUserService(repo *repositories.UserRepository, jwtSvc *utils.JWTUtil) *U
 }
 
 func (us *UserServiceImpl) UserUpdateDetails(rc context.Context,
-	userNewDetails *dto.UserUpdateDetails) error {
+	userNewDetails *dto.UserUpdateDetails, appID int64) error {
 	userID := rc.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
 	userRole := rc.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserRole
-	appID := rc.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).AppID
+	appIDFromToken := rc.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).AppID
 
 	if enums.UserRole(userRole) != enums.RoleAdmin &&
-		appID != userNewDetails.AppID &&
+		appID != appIDFromToken &&
 		userID != userNewDetails.ID {
 		slog.Error("user details update",
 			"service", "user",
 			"err", ErrInvalidUser.Error(),
 			"action", "update",
 			"user_id", userID,
+			"app_id", appID,
+			"app_id_from_token", appIDFromToken,
 		)
 		return ErrInvalidUser
 	}
@@ -121,9 +123,24 @@ func (us *UserServiceImpl) UserUpdateDetails(rc context.Context,
 	return nil
 }
 
-func (us *UserServiceImpl) GetUserByAccessToken(rc context.Context) (*dto.UserSessionIntrospection,
+func (us *UserServiceImpl) GetUserByAccessToken(rc context.Context, appID int64) (*dto.UserSessionIntrospection,
 	error) {
 	userID := rc.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserID
+	appIDFromToken := rc.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).AppID
+	userRole := rc.Value(middlewares.AuthorizationContextKey).(*utils.JWTExtractedDetails).UserRole
+	if enums.UserRole(userRole) != enums.RoleAdmin &&
+		appID != appIDFromToken {
+		slog.Error("user details fetch",
+			"service", "user",
+			"err", ErrInvalidUser.Error(),
+			"action", "fetch",
+			"user_id", userID,
+			"app_id", appID,
+			"app_id_from_token", appIDFromToken,
+		)
+		return nil, ErrInvalidUser
+	}
+
 	user, err := us.userRepo.GetUserByID(rc, userID)
 	if err != nil {
 		return nil, err
