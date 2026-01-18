@@ -23,7 +23,8 @@ func NewSignUpService(repo *repositories.UserRepository) *SignUpServiceImpl {
 	}
 }
 
-func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCreateRequest) error {
+func (ss *SignUpServiceImpl) UserCreate(rc context.Context,
+	newUser *dto.UserCreateRequest, appID int64) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
 		slog.Error("user password hashing",
@@ -31,7 +32,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 			"err", err,
 			"action", "generate",
 			"mobile_no", newUser.MobileNo,
-			"app_id", newUser.AppID,
+			"app_id", appID,
 		)
 		return ErrUserDetailsUpdate
 	}
@@ -42,7 +43,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 		FullName:     newUser.FullName,
 		Role:         enums.RoleUser,
 		IsActive:     true,
-		AppID:        newUser.AppID,
+		AppID:        appID,
 	}
 	err = ss.userRepo.Create(rc, userToCreate)
 	if err != nil {
@@ -51,7 +52,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 			"err", err,
 			"action", "create",
 			"mobile_no", newUser.MobileNo,
-			"app_id", newUser.AppID,
+			"app_id", appID,
 		)
 		if errors.Is(err, repositories.ErrRowsNotAffected) {
 			return ErrUserDetailsUpdate
@@ -62,7 +63,7 @@ func (ss *SignUpServiceImpl) UserCreate(rc context.Context, newUser *dto.UserCre
 		"service", "signup",
 		"action", "create",
 		"mobile_no", newUser.MobileNo,
-		"app_id", newUser.AppID,
+		"app_id", appID,
 	)
 	return nil
 }

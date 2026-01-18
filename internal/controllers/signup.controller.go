@@ -14,7 +14,8 @@ import (
 )
 
 type SignUpService interface {
-	UserCreate(rc context.Context, newUser *dto.UserCreateRequest) error
+	UserCreate(rc context.Context,
+		newUser *dto.UserCreateRequest, appID int64) error
 }
 
 type SignUpController struct {
@@ -29,6 +30,7 @@ func NewSignUpController(signupService SignUpService) *SignUpController {
 
 func (sc *SignUpController) CreateUser(c *gin.Context) {
 	var user dto.UserCreateRequest
+	appID := c.GetInt64("app_id")
 	err := c.ShouldBindJSON(&user)
 	if err != nil {
 		slog.Error("user parameter validation",
@@ -46,7 +48,7 @@ func (sc *SignUpController) CreateUser(c *gin.Context) {
 		return
 	}
 
-	err = sc.service.UserCreate(c.Request.Context(), &user)
+	err = sc.service.UserCreate(c.Request.Context(), &user, appID)
 	if err != nil {
 		slog.Error("user create failed",
 			"err", err,
