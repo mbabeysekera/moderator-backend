@@ -17,19 +17,19 @@ import (
 
 type ProductService interface {
 	CreateProductWithItems(c context.Context,
-		productsWithItems *dto.ProductsWithItemsRequest) error
+		productsWithItems *dto.ProductsWithItemsRequest, appID int64) error
 	GetProductsWithItems(c context.Context,
-		count string, page string, appID string,
+		count string, page string, appID int64,
 		category enums.ProductCategory) ([]repositories.ProductWithItems, error)
 	GetProductWithItems(c context.Context,
-		id string, appID string) (*repositories.ProductWithItems, error)
-	DeleteProductByID(c context.Context, id string, appID string) error
+		id string, appID int64) (*repositories.ProductWithItems, error)
+	DeleteProductByID(c context.Context, id string, appID int64) error
 	GetProductWithItemsBySku(c context.Context,
-		sku string, appID string) (*repositories.ProductWithItems, error)
+		sku string, appID int64) (*repositories.ProductWithItems, error)
 	UpdateProductStock(c context.Context,
-		stock int, productID int64, appID string) error
+		stock int, productID int64, appID int64) error
 	UpdateProductPrice(c context.Context,
-		price float64, productID int64, appID string) error
+		price float64, productID int64, appID int64) error
 }
 
 type ProductController struct {
@@ -45,6 +45,7 @@ func NewProductController(productService ProductService) *ProductController {
 func (pc *ProductController) CreateProductWithItems(c *gin.Context) {
 	var productWithItems dto.ProductsWithItemsRequest
 	err := c.ShouldBindJSON(&productWithItems)
+	appID := c.GetInt64("app_id")
 	if err != nil {
 		slog.Error("productWithItems parameter validation",
 			"err", err,
@@ -60,7 +61,7 @@ func (pc *ProductController) CreateProductWithItems(c *gin.Context) {
 		)
 		return
 	}
-	err = pc.service.CreateProductWithItems(c.Request.Context(), &productWithItems)
+	err = pc.service.CreateProductWithItems(c.Request.Context(), &productWithItems, appID)
 	if err != nil {
 		if errors.Is(err, services.ErrProductItemCreateFailed) {
 			c.JSON(http.StatusConflict,
@@ -90,9 +91,9 @@ func (pc *ProductController) GetProductsWithItems(c *gin.Context) {
 	count := c.DefaultQuery("count", "10")
 	page := c.DefaultQuery("page", "1")
 	category := c.DefaultQuery("category", "ALL")
-	appID, _ := c.Get("app_id")
+	appID := c.GetInt64("app_id")
 	productsWithItems, err := pc.service.GetProductsWithItems(c.Request.Context(), count, page,
-		appID.(string), enums.ProductCategory(category))
+		appID, enums.ProductCategory(category))
 	if err != nil {
 		if errors.Is(err, services.ErrProductFetch) {
 			c.JSON(http.StatusInternalServerError,
@@ -119,8 +120,8 @@ func (pc *ProductController) GetProductsWithItems(c *gin.Context) {
 
 func (pc *ProductController) GetProductWithItems(c *gin.Context) {
 	productID := c.Param("product_id")
-	appID, _ := c.Get("app_id")
-	productsWithItems, err := pc.service.GetProductWithItems(c.Request.Context(), productID, appID.(string))
+	appID := c.GetInt64("app_id")
+	productsWithItems, err := pc.service.GetProductWithItems(c.Request.Context(), productID, appID)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidProduct) {
 			c.JSON(http.StatusBadRequest,
@@ -156,8 +157,8 @@ func (pc *ProductController) GetProductWithItems(c *gin.Context) {
 
 func (pc *ProductController) DeleteProductByID(c *gin.Context) {
 	productID := c.Param("product_id")
-	appID, _ := c.Get("app_id")
-	err := pc.service.DeleteProductByID(c.Request.Context(), productID, appID.(string))
+	appID := c.GetInt64("app_id")
+	err := pc.service.DeleteProductByID(c.Request.Context(), productID, appID)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidParams) {
 			c.JSON(http.StatusBadRequest,
@@ -190,8 +191,8 @@ func (pc *ProductController) DeleteProductByID(c *gin.Context) {
 
 func (pc *ProductController) GetProductWithItemsBySku(c *gin.Context) {
 	sku := c.Param("sku")
-	appID, _ := c.Get("app_id")
-	productsWithItems, err := pc.service.GetProductWithItemsBySku(c.Request.Context(), sku, appID.(string))
+	appID := c.GetInt64("app_id")
+	productsWithItems, err := pc.service.GetProductWithItemsBySku(c.Request.Context(), sku, appID)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidProduct) {
 			c.JSON(http.StatusNotFound,
@@ -219,7 +220,7 @@ func (pc *ProductController) GetProductWithItemsBySku(c *gin.Context) {
 func (pc *ProductController) UpdateProduct(c *gin.Context) {
 	var productDetailsToBeUpdated dto.ProductDetailsUpdateRequest
 	err := c.ShouldBindJSON(&productDetailsToBeUpdated)
-	appID, _ := c.Get("app_id")
+	appID := c.GetInt64("app_id")
 	if err != nil {
 		slog.Error("productDetailsToBeUpdated parameter validation",
 			"err", err,
@@ -237,7 +238,7 @@ func (pc *ProductController) UpdateProduct(c *gin.Context) {
 	}
 	if productDetailsToBeUpdated.Price != nil {
 		errPrice := pc.service.UpdateProductPrice(c.Request.Context(),
-			*productDetailsToBeUpdated.Price, productDetailsToBeUpdated.ID, appID.(string))
+			*productDetailsToBeUpdated.Price, productDetailsToBeUpdated.ID, appID)
 		if errPrice != nil {
 			slog.Error("price update",
 				"err", err,
@@ -265,7 +266,7 @@ func (pc *ProductController) UpdateProduct(c *gin.Context) {
 	}
 	if productDetailsToBeUpdated.InStock != nil {
 		errStock := pc.service.UpdateProductStock(c.Request.Context(),
-			*productDetailsToBeUpdated.InStock, productDetailsToBeUpdated.ID, appID.(string))
+			*productDetailsToBeUpdated.InStock, productDetailsToBeUpdated.ID, appID)
 		if errStock != nil {
 			slog.Error("price update",
 				"err", err,
